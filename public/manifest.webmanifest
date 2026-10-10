@@ -1,0 +1,12 @@
+{
+  "name": "Rommé",
+  "short_name": "Rommé",
+  "description": "Touch-first multiplayer rummy, browser to browser",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "any",
+  "background_color": "#0b4d2c",
+  "theme_color": "#0b4d2c",
+  "icons": [{ "src": "icon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any maskable" }]
+}

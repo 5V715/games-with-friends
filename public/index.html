@@ -1,0 +1,226 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no">
+  <meta name="theme-color" content="#0b4d2c">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <title>Rommé</title>
+  <link rel="manifest" href="manifest.webmanifest">
+  <link rel="icon" href="icon.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+  <main id="app">
+
+    <!-- Home -->
+    <section id="screen-home" class="screen active">
+      <div class="home-card">
+        <h1 class="logo"><span class="suit red">♥</span>Rommé<span class="suit">♠</span></h1>
+        <p class="tagline">Play rummy with friends — browser to browser, no account needed.</p>
+
+        <label class="field">
+          <span>Your name</span>
+          <input id="name" type="text" maxlength="20" autocomplete="nickname" placeholder="Name">
+        </label>
+
+        <button class="btn primary big" id="btn-host">Create table</button>
+
+        <div class="join-row">
+          <input id="room-input" type="text" maxlength="8" placeholder="Table code" autocapitalize="characters" autocomplete="off" spellcheck="false">
+          <button class="btn big" id="btn-join">Join</button>
+        </div>
+
+        <button class="btn ghost" id="btn-manual-join">Join with an invite code (no server)</button>
+
+        <div class="practice-row">
+          <button class="btn big" id="btn-practice">Practice vs bots</button>
+          <select id="bot-count" aria-label="Number of bots">
+            <option value="1">1 bot</option>
+            <option value="2" selected>2 bots</option>
+            <option value="3">3 bots</option>
+          </select>
+        </div>
+
+        <div class="home-links">
+          <button class="link" data-open="dlg-rules">How to play</button>
+          <button class="link" data-open="dlg-settings">Connection settings</button>
+        </div>
+        <p class="server-note" id="server-note"></p>
+      </div>
+    </section>
+
+    <!-- Lobby -->
+    <section id="screen-lobby" class="screen">
+      <header class="bar">
+        <button class="btn icon" id="btn-leave-lobby" aria-label="Leave">✕</button>
+        <h2>Table</h2>
+        <span class="link-dot" id="lobby-link" title="Connection"></span>
+      </header>
+      <div class="lobby-body">
+        <div class="room-box" id="room-box">
+          <span class="room-label">Table code</span>
+          <span class="room-code" id="room-code">—</span>
+          <button class="btn" id="btn-share">Share invite link</button>
+        </div>
+
+        <ul class="player-list" id="lobby-players"></ul>
+
+        <div class="lobby-actions host-only">
+          <button class="btn" id="btn-add-bot">+ Add bot</button>
+          <button class="btn" id="btn-manual-invite">+ Invite with code</button>
+        </div>
+        <button class="btn primary big host-only" id="btn-start">Start game</button>
+        <p class="guest-only waiting">Waiting for the host to start…</p>
+      </div>
+    </section>
+
+    <!-- Game -->
+    <section id="screen-game" class="screen">
+      <header class="opponents" id="opponents"></header>
+
+      <div class="table" id="table">
+        <div class="melds" id="melds"></div>
+      </div>
+
+      <div class="piles">
+        <button class="pile stock" id="stock" data-drop="stock" aria-label="Draw from stock">
+          <div class="card back"></div>
+          <span class="pile-count" id="stock-count"></span>
+        </button>
+        <button class="pile discard" id="discard" data-drop="discard" aria-label="Discard pile"></button>
+        <div class="status" id="status"></div>
+      </div>
+
+      <div class="staging" id="staging" data-drop="stage" hidden>
+        <div class="staged-groups" id="staged-groups"></div>
+        <div class="staging-actions">
+          <span class="staged-points" id="staged-points"></span>
+          <button class="btn small" id="btn-unstage">Undo</button>
+          <button class="btn small primary" id="btn-laydown">Lay down</button>
+        </div>
+      </div>
+
+      <div class="hand-wrap">
+        <div class="hand" id="hand"></div>
+      </div>
+
+      <footer class="actions" id="actions">
+        <button class="btn icon" id="btn-menu" aria-label="Menu">☰</button>
+        <button class="btn" id="btn-sort">Sort</button>
+        <button class="btn primary" id="btn-meld">Meld</button>
+        <button class="btn" id="btn-discard">Discard</button>
+      </footer>
+    </section>
+
+    <div class="toast" id="toast" role="status" aria-live="polite"></div>
+  </main>
+
+  <!-- Round over -->
+  <dialog id="dlg-round" class="sheet">
+    <h2 id="round-title">Round over</h2>
+    <table class="scores" id="round-scores"></table>
+    <div class="dlg-actions">
+      <button class="btn" data-close>Show table</button>
+      <button class="btn primary host-only" id="btn-next-round">Next round</button>
+      <p class="guest-only waiting">Waiting for the host…</p>
+    </div>
+  </dialog>
+
+  <!-- In-game menu -->
+  <dialog id="dlg-menu" class="sheet">
+    <h2>Menu</h2>
+    <table class="scores" id="menu-scores"></table>
+    <div class="menu-conn" id="menu-conn"></div>
+    <div class="dlg-actions column">
+      <button class="btn" data-open="dlg-rules">How to play</button>
+      <button class="btn danger" id="btn-quit">Leave game</button>
+      <button class="btn primary" data-close>Back to game</button>
+    </div>
+  </dialog>
+
+  <!-- Host: manual invite -->
+  <dialog id="dlg-invite" class="sheet">
+    <h2>Invite with a code</h2>
+    <p class="hint">Works without the signaling server. Send this <b>invite code</b> to one friend (chat, mail…):</p>
+    <textarea id="invite-code" readonly rows="4" placeholder="Gathering ICE candidates…"></textarea>
+    <button class="btn" id="btn-copy-invite">Copy invite code</button>
+    <p class="hint">Then paste the <b>reply code</b> they send back:</p>
+    <textarea id="invite-answer" rows="4" placeholder="Paste reply code"></textarea>
+    <div class="dlg-actions">
+      <button class="btn" id="btn-invite-cancel">Cancel</button>
+      <button class="btn primary" id="btn-invite-connect">Connect</button>
+    </div>
+  </dialog>
+
+  <!-- Guest: manual join -->
+  <dialog id="dlg-manual-join" class="sheet">
+    <h2>Join with an invite code</h2>
+    <p class="hint">Paste the <b>invite code</b> from the host:</p>
+    <textarea id="join-offer" rows="4" placeholder="Paste invite code"></textarea>
+    <button class="btn primary" id="btn-make-answer">Create reply code</button>
+    <div id="join-answer-box" hidden>
+      <p class="hint">Send this <b>reply code</b> back to the host. You'll join as soon as they paste it.</p>
+      <textarea id="join-answer" readonly rows="4"></textarea>
+      <button class="btn" id="btn-copy-answer">Copy reply code</button>
+    </div>
+    <div class="dlg-actions">
+      <button class="btn" id="btn-manual-cancel">Cancel</button>
+    </div>
+  </dialog>
+
+  <!-- Settings -->
+  <dialog id="dlg-settings" class="sheet">
+    <h2>Connection settings</h2>
+    <p class="hint">The <b>signaling server</b> only introduces players to each other (table codes).
+      Leave empty to use the default; without one, connect with invite codes.</p>
+    <label class="field"><span>Signaling server URL</span>
+      <input id="signal-url" type="url" inputmode="url" autocomplete="off" spellcheck="false"></label>
+    <p class="hint">Players connect directly using WebRTC. STUN finds a direct route; if a firewall blocks it,
+      a <b>TURN</b> relay is needed. Add your own TURN server here (stored on this device only).</p>
+    <label class="field"><span>TURN URLs (comma separated)</span>
+      <input id="turn-urls" type="text" placeholder="turn:turn.example.com:3478" autocomplete="off" spellcheck="false"></label>
+    <label class="field"><span>Username</span>
+      <input id="turn-user" type="text" autocomplete="off" spellcheck="false"></label>
+    <label class="field"><span>Credential</span>
+      <input id="turn-pass" type="password" autocomplete="off"></label>
+    <label class="check"><input id="turn-relay" type="checkbox"> Always relay through TURN (hides your IP)</label>
+    <div class="dlg-actions">
+      <button class="btn" data-close>Cancel</button>
+      <button class="btn primary" id="btn-save-settings">Save</button>
+    </div>
+  </dialog>
+
+  <!-- Rules -->
+  <dialog id="dlg-rules" class="sheet">
+    <h2>How to play</h2>
+    <div class="rules">
+      <p>110 cards: two decks plus 6 jokers. Everyone gets 13 cards. Get rid of all your cards first.</p>
+      <h3>Your turn</h3>
+      <ol>
+        <li><b>Draw</b> – tap the stock or the discard pile.</li>
+        <li><b>Meld</b> (optional) – select cards and tap <i>Meld</i>.</li>
+        <li><b>Discard</b> – select one card and tap the discard pile.</li>
+      </ol>
+      <h3>Melds</h3>
+      <p><b>Set:</b> 3–4 cards of the same rank, all different suits (7♥ 7♠ 7♦).<br>
+         <b>Run:</b> 3+ cards in a row, same suit (4♣ 5♣ 6♣). Ace is low (A‑2‑3) or high (Q‑K‑A).<br>
+         <b>Jokers</b> replace any card.</p>
+      <h3>Coming out</h3>
+      <p>Your first meld must be worth at least <b>30 points</b> (2–9 face value, 10/J/Q/K = 10, ace = 11 or 1 in A‑2‑3).
+        Stage several groups and tap <i>Lay down</i>. Afterwards you may add cards to any meld on the table
+        (select cards, tap the meld) and swap a joker for the card it stands for.</p>
+      <h3>Scoring</h3>
+      <p>When someone goes out, the others score their remaining cards as penalty: joker 20, ace 11, pictures 10,
+        others face value. Going out in a single turn (<b>Hand‑Rommé</b>) doubles the penalty. Lowest total wins.</p>
+      <h3>Touch tips</h3>
+      <p>Tap to select. Drag a card to rearrange your hand, or drag it onto a meld or the discard pile.</p>
+    </div>
+    <div class="dlg-actions"><button class="btn primary" data-close>Got it</button></div>
+  </dialog>
+
+  <script type="module" src="js/main.js"></script>
+</body>
+</html>

@@ -1,0 +1,16 @@
+{
+  "name": "romme",
+  "version": "1.0.0",
+  "description": "Touch-first multiplayer Romm\u00e9 card game in the browser, connected peer-to-peer over WebRTC (ICE)",
+  "type": "module",
+  "private": true,
+  "scripts": {
+    "dev": "node scripts/dev.js",
+    "start": "node server/server.js",
+    "test": "node --test test/*.test.js"
+  },
+  "engines": {
+    "node": ">=18"
+  },
+  "license": "MIT"
+}

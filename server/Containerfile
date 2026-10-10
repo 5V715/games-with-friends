@@ -1,0 +1,24 @@
+# OCI image for the Rommé signaling server (no npm dependencies).
+# Build:  podman build -t romme-signaling -f server/Containerfile server
+#    or:  docker build -t romme-signaling -f server/Containerfile server
+FROM docker.io/library/node:22-alpine
+
+LABEL org.opencontainers.image.title="romme-signaling" \
+      org.opencontainers.image.description="WebRTC signaling relay for the Rommé card game" \
+      org.opencontainers.image.licenses="MIT"
+
+ENV NODE_ENV=production \
+    PORT=8080 \
+    HOST=0.0.0.0 \
+    ALLOWED_ORIGINS=*
+
+WORKDIR /app
+COPY package.json server.js ./
+
+USER node
+EXPOSE 8080
+
+HEALTHCHECK --interval=30s --timeout=3s --start-period=5s \
+  CMD wget -qO- "http://127.0.0.1:${PORT}/healthz" > /dev/null || exit 1
+
+CMD ["node", "server.js"]

@@ -1,0 +1,40 @@
+name: Deploy game to GitHub Pages
+
+on:
+  push:
+    branches: [main]
+    paths: ['public/**', '.github/workflows/pages.yml']
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: true
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - uses: actions/checkout@v4
+
+      # Point the game at your signaling server: set the repository variable
+      # SIGNALING_URL (Settings → Secrets and variables → Actions → Variables).
+      - name: Write config.js
+        env:
+          SIGNALING_URL: ${{ vars.SIGNALING_URL }}
+        run: |
+          node -e 'const u = process.env.SIGNALING_URL || ""; require("fs").writeFileSync("public/config.js", `export const SIGNALING_URL = ${JSON.stringify(u)};\n`)'
+
+      - uses: actions/configure-pages@v5
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: public
+      - id: deployment
+        uses: actions/deploy-pages@v4
