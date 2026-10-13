@@ -1,0 +1,5 @@
+# Only the server and the static game go into the image.
+*
+!server/package.json
+!server/server.js
+!public/

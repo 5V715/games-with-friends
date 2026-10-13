@@ -513,9 +513,19 @@ body.dragging-cards, body.dragging-cards * { cursor: grabbing !important; }
 /* ---------- Push to talk ---------- */
 
 .btn.ptt {
+  position: relative;
+  overflow: hidden;
   touch-action: none;
   -webkit-touch-callout: none;
 }
+.btn.ptt .ptt-wave {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+}
+.btn.ptt .ptt-label { position: relative; z-index: 1; pointer-events: none; }
 .btn.ptt[hidden] { display: none; }
 .btn.ptt.recording {
   background: var(--danger);

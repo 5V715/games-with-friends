@@ -1,14 +1,16 @@
 // Rommé signaling server: a tiny WebRTC signaling relay with no dependencies.
 //
-// The game itself is a static site (public/, e.g. on GitHub Pages) and is NOT
-// served from here. Players never send game traffic through this server
-// either. It only relays the
+// The game itself is a static site (public/). It can live on GitHub Pages,
+// or this server serves it too (SERVE_GAME, on by default when the files are
+// there, e.g. in the container image). Players never send game traffic
+// through this server. It only relays the
 // SDP offers/answers and ICE candidates needed to open a direct WebRTC data
 // channel between the host and each guest. Signaling uses Server-Sent Events
 // (server → browser) and POST requests (browser → server).
 //
 //   GET  /healthz                      liveness probe (number of rooms only)
 //   GET  /admin/rooms                  list all rooms (needs ADMIN_TOKEN)
+//   GET  /, /js/…, /css/…              the game itself (when SERVE_GAME is on)
 //   GET  /api/ice                      ICE server list (STUN/TURN) for clients
 //   GET  /api/signal?room=&peer=&role= event stream for one peer in a room
 //   POST /api/signal                   { room, from, to, data } relay a message
@@ -22,12 +24,32 @@
 //   TURN_URL, TURN_USERNAME, TURN_CREDENTIAL   add a TURN server
 //   ADMIN_TOKEN   enables GET /admin/rooms; send it as "Authorization: Bearer
 //                 <token>" or ?token=<token>. Unset = admin endpoint disabled.
+//   SERVE_GAME    serve the game's static files (default: on if found)
+//   PUBLIC_DIR    where they are (default: ./public next to server.js, or ../public)
 //   ROOM_IDLE_MINUTES  close rooms without signaling activity (joins, offers,
 //                 ICE candidates) for this long (default 120, 0 = never).
 //                 Games already running are not affected: they talk directly.
 
 import http from 'node:http';
 import crypto from 'node:crypto';
+import fs from 'node:fs';
+import path from 'node:path';
+import { fileURLToPath } from 'node:url';
+
+const HERE = path.dirname(fileURLToPath(import.meta.url));
+const PUBLIC_DIR = process.env.PUBLIC_DIR ? path.resolve(process.env.PUBLIC_DIR)
+  : [path.join(HERE, 'public'), path.join(HERE, '..', 'public')].find(d => fs.existsSync(path.join(d, 'index.html'))) || '';
+const SERVE_GAME = process.env.SERVE_GAME !== 'false' && !!PUBLIC_DIR && fs.existsSync(path.join(PUBLIC_DIR, 'index.html'));
+const MIME = {
+  '.html': 'text/html; charset=utf-8',
+  '.js': 'text/javascript; charset=utf-8',
+  '.css': 'text/css; charset=utf-8',
+  '.json': 'application/json; charset=utf-8',
+  '.webmanifest': 'application/manifest+json',
+  '.svg': 'image/svg+xml',
+  '.png': 'image/png',
+  '.ico': 'image/x-icon',
+};
 
 const PORT = Number(process.env.PORT) || 8080;
 const HOST = process.env.HOST || '0.0.0.0';
@@ -45,6 +67,16 @@ const ALLOWED_ORIGINS = (process.env.ALLOWED_ORIGINS || '*').split(',').map(s =>
 // needs these headers. Returns false if the origin is not allowed.
 function cors(req, res) {
   const origin = req.headers.origin;
+  // The game served by this very server is always allowed.
+  if (origin && SERVE_GAME) {
+    let host = '';
+    try { host = new URL(origin).host; } catch { /* bad origin */ }
+    if (host && (host === req.headers.host || host === req.headers['x-forwarded-host'])) {
+      res.setHeader('Vary', 'Origin');
+      res.setHeader('Access-Control-Allow-Origin', origin);
+      return true;
+    }
+  }
   if (ALLOWED_ORIGINS.includes('*')) {
     res.setHeader('Access-Control-Allow-Origin', '*');
     return true;
@@ -217,6 +249,24 @@ async function relay(req, res) {
   json(res, 200, { ok: true });
 }
 
+function serveStatic(req, res, url) {
+  let rel;
+  try { rel = decodeURIComponent(url.pathname); } catch { return json(res, 400, { error: 'bad path' }); }
+  if (rel.endsWith('/')) rel += 'index.html';
+  const file = path.join(PUBLIC_DIR, path.normalize(rel));
+  if (!file.startsWith(PUBLIC_DIR + path.sep)) return json(res, 403, { error: 'forbidden' });
+  fs.readFile(file, (err, body) => {
+    if (err) return json(res, 404, { error: 'not found' });
+    res.writeHead(200, {
+      'Content-Type': MIME[path.extname(file)] || 'application/octet-stream',
+      'Cache-Control': 'no-cache',
+      'X-Content-Type-Options': 'nosniff',
+      'Referrer-Policy': 'no-referrer',
+    });
+    res.end(req.method === 'HEAD' ? undefined : body);
+  });
+}
+
 const server = http.createServer((req, res) => {
   const url = new URL(req.url, 'http://localhost');
   if (url.pathname === '/healthz') return json(res, 200, { ok: true, rooms: rooms.size });
@@ -225,6 +275,8 @@ const server = http.createServer((req, res) => {
     if (!adminAuthorized(req, url)) return json(res, 401, { error: 'unauthorized' });
     return json(res, 200, { rooms: listRooms(), idleMinutes: ROOM_IDLE_MS > 0 ? ROOM_IDLE_MS / 60000 : null });
   }
+  const isApi = url.pathname.startsWith('/api/');
+  if (!isApi && SERVE_GAME && (req.method === 'GET' || req.method === 'HEAD')) return serveStatic(req, res, url);
   if (!cors(req, res)) return json(res, 403, { error: 'origin not allowed' });
   if (req.method === 'OPTIONS') {
     res.writeHead(204, {
@@ -243,7 +295,8 @@ const server = http.createServer((req, res) => {
 
 server.listen(PORT, HOST, () => {
   console.log(`Rommé signaling server on http://${HOST}:${PORT} (allowed origins: ${ALLOWED_ORIGINS.join(', ')}; ` +
-    `room idle timeout: ${ROOM_IDLE_MS > 0 ? ROOM_IDLE_MS / 60000 + ' min' : 'off'}; admin: ${ADMIN_TOKEN ? 'on' : 'off'})`);
+    `room idle timeout: ${ROOM_IDLE_MS > 0 ? ROOM_IDLE_MS / 60000 + ' min' : 'off'}; admin: ${ADMIN_TOKEN ? 'on' : 'off'}; ` +
+    `game: ${SERVE_GAME ? 'served from ' + PUBLIC_DIR : 'not served'})`);
 });
 
 function shutdown() {

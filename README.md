@@ -99,7 +99,7 @@ multi-arch (amd64, arm64 and arm/v7 – e.g. Raspberry Pi with 64- or 32-bit OS)
 Build and run it yourself:
 
 ```sh
-docker build -t romme-signaling -f server/Containerfile server   # or: podman build …
+docker build -t romme-signaling -f server/Containerfile .   # from the repo root; or: podman build …
 docker run -p 8080:8080 \
   -e ALLOWED_ORIGINS=https://<you>.github.io \
   romme-signaling
@@ -116,6 +116,8 @@ on an `https://` page.
 | `ALLOWED_ORIGINS` | `*` | Comma-separated origins allowed by CORS, e.g. `https://you.github.io` |
 | `ICE_SERVERS` | Google STUN | JSON array of `RTCIceServer` objects sent to clients |
 | `TURN_URL`, `TURN_USERNAME`, `TURN_CREDENTIAL` | – | Adds a TURN server (e.g. coturn) to the list |
+| `SERVE_GAME` | `true` in the image | Also serves the game page itself, so the container works without GitHub Pages: open `http://<server>:8080/`. `false` turns this off. |
+| `PUBLIC_DIR` | `./public` | Where the game's files are |
 | `ADMIN_TOKEN` | – | Enables `GET /admin/rooms`, which lists all rooms. Unset means the endpoint is off. |
 | `ROOM_IDLE_MINUTES` | `120` | Closes a room after this many minutes without signaling activity (joins, offers, ICE candidates). `0` turns it off. Games already running stay connected because they talk peer-to-peer, but new players can't join that room any more. |
 
@@ -135,6 +137,13 @@ curl -H "Authorization: Bearer $ADMIN_TOKEN" https://your-server.example.com/adm
   "createdAt": "…", "lastActivity": "…", "ageMinutes": 12, "idleMinutes": 4,
   "expiresInMinutes": 116 } ], "idleMinutes": 120 }
 ```
+
+### All in one container (no GitHub Pages)
+
+The image also contains the game. Run it and open the server's address in the
+browser. The page notices that its own server offers signaling, so you don't
+need a `SIGNALING_URL` or `?signal=` parameter. Microphone access (push to talk)
+needs HTTPS, so put the container behind a TLS proxy for use on phones.
 
 ### About TURN
 

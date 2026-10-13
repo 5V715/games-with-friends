@@ -4,9 +4,9 @@ on:
   push:
     branches: [main]
     tags: ['v*']
-    paths: ['server/**', '.github/workflows/server-image.yml']
+    paths: ['server/**', 'public/**', '.dockerignore', '.github/workflows/server-image.yml']
   pull_request:
-    paths: ['server/**', '.github/workflows/server-image.yml']
+    paths: ['server/**', 'public/**', '.dockerignore', '.github/workflows/server-image.yml']
   workflow_dispatch:
 
 permissions:
@@ -46,7 +46,7 @@ jobs:
       - name: Build (and push) OCI image
         uses: docker/build-push-action@v6
         with:
-          context: server
+          context: .
           file: server/Containerfile
           platforms: linux/amd64,linux/arm64,linux/arm/v7
           push: ${{ github.event_name != 'pull_request' }}

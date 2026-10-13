@@ -72,7 +72,7 @@
           <button class="btn" id="btn-add-bot" data-i18n="lobby.addBot">+ Add bot</button>
           <button class="btn" id="btn-manual-invite" data-i18n="lobby.invite">+ Invite with code</button>
         </div>
-        <button class="btn big ptt" id="btn-ptt-lobby" aria-label="Hold to talk" data-i18n="ptt.hold" data-i18n-aria="ptt.aria">🎤 Hold to talk</button>
+        <button class="btn big ptt" id="btn-ptt-lobby" aria-label="Hold to talk" data-i18n-aria="ptt.aria"><canvas class="ptt-wave" aria-hidden="true"></canvas><span class="ptt-label" data-i18n="ptt.hold">🎤 Hold to talk</span></button>
         <button class="btn primary big host-only" id="btn-start" data-i18n="lobby.start">Start game</button>
         <p class="guest-only waiting" data-i18n="lobby.waiting">Waiting for the host to start…</p>
       </div>
@@ -119,7 +119,7 @@
         <button class="btn" id="btn-sort">Sort</button>
         <button class="btn primary" id="btn-meld">Meld</button>
         <button class="btn" id="btn-discard" data-i18n="game.discard">Discard</button>
-        <button class="btn icon ptt" id="btn-ptt" aria-label="Hold to talk" title="Hold to talk" data-i18n-aria="ptt.aria" data-i18n-title="ptt.aria">🎤</button>
+        <button class="btn icon ptt" id="btn-ptt" aria-label="Hold to talk" title="Hold to talk" data-i18n-aria="ptt.aria" data-i18n-title="ptt.aria"><canvas class="ptt-wave" aria-hidden="true"></canvas><span class="ptt-label">🎤</span></button>
       </footer>
     </section>
 

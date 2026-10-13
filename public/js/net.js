@@ -90,11 +90,22 @@ async function probeServer(base) {
 }
 
 // Returns { base, signaling, iceServers, relayOnly }.
+// The page's own directory, e.g. https://host/ or https://host/romme.
+function pageBase() {
+  return /^https?:$/.test(location.protocol) ? new URL('.', location.href).href.replace(/\/+$/, '') : '';
+}
+
 export async function getNetConfig() {
-  const base = signalingUrl();
+  let base = signalingUrl();
+  // Nothing configured: maybe the signaling server is serving this page.
+  const auto = !base;
+  if (auto) base = pageBase();
   if (!serverInfo || serverInfo.base !== base) serverInfo = { base, promise: probeServer(base) };
   const info = await serverInfo.promise;
-  if (!info.signaling) serverInfo = null; // retry next time
+  if (!info.signaling) {
+    serverInfo = null; // retry next time
+    if (auto) base = ''; // not found on our own origin = no server configured
+  }
   const iceServers = info.iceServers.slice();
   const turn = loadTurnSettings();
   if (turn.urls) {

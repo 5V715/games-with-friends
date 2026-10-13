@@ -923,7 +923,6 @@ function roomUrl(room) {
 
 const ptt = new PushToTalk();
 const voicePlayer = new VoicePlayer();
-let pttTimer = null;
 
 function speakerName(id) {
   const p = ui.view?.players.find(x => x.id === id);
@@ -946,20 +945,58 @@ voicePlayer.addEventListener('end', (ev) => {
   if (!ev.detail.ok) toast(t('ptt.playFailed', { name: speakerName(ev.detail.from) }), { error: true });
 });
 
+// The 🎤 button fills from left to right while recording (time used of the
+// 15 s maximum) with a live waveform of the microphone level.
+const WAVE_BARS = 60;
+let waveLevels = [];
+let waveFrame = 0;
+
+function drawWave() {
+  const prog = ptt.progress();
+  const level = ptt.level();
+  const bucket = Math.min(WAVE_BARS - 1, Math.floor(prog * WAVE_BARS));
+  waveLevels[bucket] = Math.max(waveLevels[bucket] || 0, level);
+  const dpr = window.devicePixelRatio || 1;
+  for (const canvas of $$('.btn.ptt .ptt-wave')) {
+    const w = Math.round(canvas.clientWidth * dpr);
+    const h = Math.round(canvas.clientHeight * dpr);
+    if (!w || !h) continue;
+    if (canvas.width !== w || canvas.height !== h) Object.assign(canvas, { width: w, height: h });
+    const g = canvas.getContext('2d');
+    g.clearRect(0, 0, w, h);
+    const filled = prog * w;
+    g.fillStyle = 'rgba(255, 255, 255, .22)';
+    g.fillRect(0, 0, filled, h);
+    const barW = w / WAVE_BARS;
+    g.fillStyle = 'rgba(255, 255, 255, .9)';
+    for (let i = 0; i <= bucket; i++) {
+      const bh = Math.max(2 * dpr, (waveLevels[i] || 0) * h * 0.8);
+      g.fillRect(i * barW + barW * 0.2, (h - bh) / 2, Math.max(1, barW * 0.6), bh);
+    }
+    g.fillStyle = '#fff';
+    g.fillRect(Math.min(filled, w - 2 * dpr), 0, 2 * dpr, h);
+  }
+  const left = Math.max(0, Math.ceil((1 - prog) * VOICE_MAX_MS / 1000));
+  $('#ptt-time').textContent = `${t('ptt.left', { s: left })} · ${t('ptt.release')}`;
+  waveFrame = requestAnimationFrame(drawWave);
+}
+
+function clearWave() {
+  cancelAnimationFrame(waveFrame);
+  waveLevels = [];
+  for (const canvas of $$('.btn.ptt .ptt-wave')) canvas.getContext('2d').clearRect(0, 0, canvas.width, canvas.height);
+}
+
 ptt.addEventListener('state', (ev) => {
   const recording = ev.detail === 'recording';
   for (const b of $$('.btn.ptt')) b.classList.toggle('recording', ev.detail !== 'idle');
   $('#ptt-indicator').hidden = !recording;
-  clearInterval(pttTimer);
+  clearWave();
+  if (ev.detail === 'idle') voicePlayer.resume();
+  else voicePlayer.hold(); // don't play others' messages into your microphone
   if (recording) {
     buzz(15);
-    const t0 = Date.now();
-    const tick = () => {
-      const s = Math.floor((Date.now() - t0) / 1000);
-      $('#ptt-time').textContent = `${s}s / ${VOICE_MAX_MS / 1000}s · ${t('ptt.release')}`;
-    };
-    tick();
-    pttTimer = setInterval(tick, 250);
+    drawWave();
   }
 });
 

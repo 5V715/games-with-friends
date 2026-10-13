@@ -91,8 +91,40 @@ export class PushToTalk extends EventTarget {
       };
     });
     rec.start();
+    this.#startMeter(stream);
     this.maxTimer = setTimeout(() => this.stop(), VOICE_MAX_MS);
     this.dispatchEvent(new CustomEvent('state', { detail: 'recording' }));
+  }
+
+  // Live input level for the button's waveform (Web Audio analyser).
+  #startMeter(stream) {
+    try {
+      const Ctx = window.AudioContext || window.webkitAudioContext;
+      this.audioCtx ||= new Ctx();
+      this.audioCtx.resume?.();
+      this.meterSource?.disconnect();
+      this.meterSource = this.audioCtx.createMediaStreamSource(stream);
+      this.analyser = this.audioCtx.createAnalyser();
+      this.analyser.fftSize = 512;
+      this.meterSource.connect(this.analyser);
+      this.meterBuf = new Uint8Array(this.analyser.fftSize);
+    } catch {
+      this.analyser = null;
+    }
+  }
+
+  // 0..1 loudness of the microphone right now.
+  level() {
+    if (!this.analyser || !this.recorder) return 0;
+    this.analyser.getByteTimeDomainData(this.meterBuf);
+    let sum = 0;
+    for (const v of this.meterBuf) sum += (v - 128) * (v - 128);
+    return Math.min(1, Math.sqrt(sum / this.meterBuf.length) / 40);
+  }
+
+  // 0..1 share of the maximum message length already used.
+  progress() {
+    return this.recorder ? Math.min(1, (performance.now() - this.startedAt) / VOICE_MAX_MS) : 0;
   }
 
   // Resolves with { blob, ms } or null (too short / cancelled).
@@ -105,6 +137,8 @@ export class PushToTalk extends EventTarget {
     }
     const rec = this.recorder;
     this.recorder = null;
+    this.meterSource?.disconnect();
+    this.meterSource = null;
     if (rec.state !== 'inactive') rec.stop();
     const result = await this.done;
     this.recording = false;
@@ -190,7 +224,7 @@ export class VoicePlayer extends EventTarget {
 
   // Mobile browsers only allow audio after a user gesture; call this from one.
   unlock() {
-    if (this.unlocked) return;
+    if (this.unlocked || this.playing) return;
     this.unlocked = true;
     // A tiny silent WAV, played once inside the gesture, unlocks the element.
     this.audio.src = 'data:audio/wav;base64,UklGRiQAAABXQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YQAAAAA=';
@@ -200,31 +234,44 @@ export class VoicePlayer extends EventTarget {
   enqueue(clip) {
     if (this.queue.length > 10) return;
     this.queue.push(clip);
-    if (!this.playing) this.#next();
+    this.#next();
   }
 
-  async #next() {
+  // While you record, incoming clips wait so they don't end up in your
+  // message; resume() plays them afterwards.
+  hold() {
+    this.held = true;
+  }
+
+  resume() {
+    this.held = false;
+    this.#next();
+  }
+
+  // Plays queued clips strictly one after another, never on top of each other.
+  #next() {
+    if (this.playing || this.held) return;
     const clip = this.queue.shift();
-    if (!clip) {
-      this.playing = false;
-      return;
-    }
+    if (!clip) return;
     this.playing = true;
     const url = URL.createObjectURL(clip.blob);
+    let done = false;
     const finish = (ok) => {
+      if (done) return; // ended/error/play() rejection may all report the same clip
+      done = true;
+      clearTimeout(guard);
       URL.revokeObjectURL(url);
       this.audio.onended = this.audio.onerror = null;
+      this.playing = false;
       this.dispatchEvent(new CustomEvent('end', { detail: { from: clip.from, ok } }));
       this.#next();
     };
+    // Safety net in case a broken clip never reports ended/error.
+    const guard = setTimeout(() => finish(false), 20000);
     this.audio.onended = () => finish(true);
     this.audio.onerror = () => finish(false);
     this.audio.src = url;
     this.dispatchEvent(new CustomEvent('start', { detail: { from: clip.from } }));
-    try {
-      await this.audio.play();
-    } catch {
-      finish(false);
-    }
+    this.audio.play().catch(() => finish(false));
   }
 }
