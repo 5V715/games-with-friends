@@ -40,6 +40,8 @@ const ui = {
   staged: [],
   sortMode: 'suit',
   shownResultRound: 0,
+  shownCutRound: 0,
+  lastCutPrompt: 0,
   lastTurn: null,
   knownMelds: new Set(),
   link: null,
@@ -159,6 +161,8 @@ function attach(session) {
   ui.selected.clear();
   ui.staged = [];
   ui.shownResultRound = 0;
+  ui.shownCutRound = 0;
+  ui.lastCutPrompt = 0;
   ui.knownMelds = new Set();
   ui.link = null;
   document.body.classList.toggle('is-host', session.isHost);
@@ -195,7 +199,7 @@ function applyView(view) {
   const idSet = new Set(ids);
   ui.freshIds = new Set(prev && prev.phase !== 'lobby' && prev.round === view.round
     ? ids.filter(id => !ui.knownIds.has(id)) : []);
-  if (!prev || prev.round !== view.round) {
+  if (!prev || prev.round !== view.round || (prev.phase === 'cut' && view.phase !== 'cut')) {
     ui.handOrder = ids;
     ui.staged = [];
     ui.selected.clear();
@@ -232,7 +236,84 @@ function render() {
   renderStaging();
   renderHand();
   renderActions();
+  renderCut();
   renderRoundOver();
+}
+
+// ---------------------------------------------------------------- cutting the deck
+
+const CUT_BACKS = 28;
+
+function renderCut() {
+  const v = ui.view;
+  const panel = $('#cut-panel');
+  panel.hidden = v.phase !== 'cut';
+  $('#melds').hidden = v.phase === 'cut';
+  if (v.phase === 'cut') {
+    const mine = v.cutter === v.you;
+    const cutter = v.players.find(p => p.id === v.cutter);
+    $('#cut-title').textContent = mine ? 'Cut the deck' : `${cutter?.name || '…'} is cutting the deck`;
+    $('#cut-hint').hidden = !mine;
+    const deck = $('#cut-deck');
+    deck.classList.toggle('mine', mine);
+    deck.classList.toggle('waiting', !mine);
+    if (deck.children.length !== CUT_BACKS) {
+      deck.innerHTML = '';
+      for (let i = 0; i < CUT_BACKS; i++) {
+        const c = document.createElement('div');
+        c.className = 'card back';
+        deck.append(c);
+      }
+    }
+    if (mine && ui.lastCutPrompt !== v.round) {
+      ui.lastCutPrompt = v.round;
+      buzz(25);
+    }
+  }
+  // Show the cutter what was at the cut, once per round.
+  if (v.cut && ui.shownCutRound !== v.round && v.phase !== 'cut') {
+    ui.shownCutRound = v.round;
+    const kept = new Set(v.cut.kept);
+    const peek = $('#cut-peek');
+    peek.innerHTML = '';
+    for (const c of v.cut.peek) {
+      const el = cardEl(c);
+      el.classList.add(kept.has(c.id) ? 'kept' : 'back-to-deck');
+      peek.append(el);
+    }
+    const n = kept.size;
+    $('#cut-result-title').textContent = n ? (n === 1 ? 'You keep a joker! 🎉' : `You keep ${n} jokers! 🎉`) : 'No joker this time';
+    $('#cut-result-text').textContent = n
+      ? 'The joker is in your hand and counts towards your 12 cards. The other cards go back into the deck.'
+      : 'These cards go back into the deck.';
+    if (n) buzz([30, 50, 30]);
+    openDialog('dlg-cut');
+  }
+}
+
+function cutFraction(ev) {
+  const r = $('#cut-deck').getBoundingClientRect();
+  return Math.min(1, Math.max(0, (ev.clientX - r.left) / r.width));
+}
+
+function onCutMove(ev) {
+  const v = ui.view;
+  if (!v || v.phase !== 'cut' || v.cutter !== v.you) return;
+  const deck = $('#cut-deck');
+  const r = deck.getBoundingClientRect();
+  const x = ev.clientX - r.left;
+  deck.style.setProperty('--cut-x', `${x}px`);
+  const cards = [...deck.children];
+  for (const c of cards) {
+    const cr = c.getBoundingClientRect();
+    c.classList.toggle('lift', cr.left + cr.width / 2 > ev.clientX);
+  }
+}
+
+function onCutUp(ev) {
+  const v = ui.view;
+  if (!v || v.phase !== 'cut' || v.cutter !== v.you) return;
+  act({ type: 'cut', at: cutFraction(ev) });
 }
 
 function connChip(p) {
@@ -358,7 +439,8 @@ function renderPiles() {
   const status = $('#status');
   const cur = v.players.find(p => p.id === v.turn);
   let main;
-  if (v.phase === 'roundOver') main = 'Round over';
+  if (v.phase === 'cut') main = v.cutter === v.you ? 'Cut the deck' : 'Cutting the deck…';
+  else if (v.phase === 'roundOver') main = 'Round over';
   else if (myTurn()) main = v.phase === 'draw' ? 'Your turn — draw a card' : 'Meld, then discard';
   else main = `${cur?.name || '…'} is playing`;
   status.className = 'status' + (myTurn() ? ' your-turn' : '');
@@ -965,6 +1047,11 @@ function bind() {
   $('#btn-menu').onclick = openMenu;
   $('#btn-quit').onclick = () => { if (confirm('Leave this game?')) leave(); };
   $('#btn-next-round').onclick = () => { closeDialog('dlg-round'); ui.session?.act({ type: 'nextRound' }); };
+
+  const cutDeck = $('#cut-deck');
+  cutDeck.addEventListener('pointerdown', (e) => { cutDeck.setPointerCapture(e.pointerId); onCutMove(e); });
+  cutDeck.addEventListener('pointermove', onCutMove);
+  cutDeck.addEventListener('pointerup', onCutUp);
 
   const hand = $('#hand');
   hand.addEventListener('pointerdown', onPointerDown);

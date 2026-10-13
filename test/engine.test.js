@@ -7,6 +7,8 @@ function newGame(n) {
   const g = new Game();
   for (let i = 0; i < n; i++) g.addPlayer('p' + i, 'P' + i, { bot: true });
   g.start();
+  assert.equal(g.phase, 'cut');
+  assert.ok(g.apply(g.cutter.id, { type: 'cut', at: Math.random() }).ok);
   return g;
 }
 
@@ -22,6 +24,8 @@ test('deal', () => {
   const g = newGame(3);
   assert.equal(g.phase, 'play', 'starting player skips the draw');
   for (const p of g.players) assert.equal(p.hand.length, p === g.current ? 13 : 12);
+  const jokers = g.cutResult.kept.length;
+  assert.equal(g.cutResult.peek.length, 3);
   assert.equal(g.discard.length, 0);
   assert.equal(g.stock.length, 110 - 36 - 1);
   const first = g.current;
@@ -102,4 +106,40 @@ test('first meld needs 40 points; lay off and swap need to be out and on turn', 
   assert.equal(g.apply(other.id, { type: 'layoff', meldId: g.melds[1].id, cardIds: ['z'] }).ok, false);
   other.cameOut = true;
   assert.match(g.apply(other.id, { type: 'layoff', meldId: g.melds[1].id, cardIds: ['z'] }).error, /not your turn/);
+});
+
+test('cutting: only the cutter, jokers at the cut are kept and count towards 12', () => {
+  for (let i = 0; i < 300; i++) {
+    const g = new Game();
+    for (let k = 0; k < 3; k++) g.addPlayer('p' + k, 'P' + k, { bot: true });
+    g.start();
+    const cutter = g.cutter;
+    const other = g.players.find(p => p !== cutter);
+    assert.equal(g.apply(other.id, { type: 'cut', at: 0.5 }).ok, false);
+    assert.equal(g.apply(g.current.id, { type: 'draw', from: 'stock' }).ok, false, 'no play before the cut');
+    assert.ok(g.apply(cutter.id, { type: 'cut', at: i / 299 }).ok);
+    assert.equal(g.apply(cutter.id, { type: 'cut', at: 0.5 }).ok, false, 'only once');
+    const { peek, kept } = g.cutResult;
+    assert.deepEqual(kept, peek.filter(c => c.joker).map(c => c.id));
+    for (const id of kept) assert.ok(cutter.hand.some(c => c.id === id), 'cutter keeps the joker');
+    for (const p of g.players) assert.equal(p.hand.length, p === g.current ? 13 : 12);
+    const total = g.players.reduce((n, p) => n + p.hand.length, 0) + g.stock.length + g.discard.length;
+    assert.equal(total, 110);
+    assert.equal(g.view(cutter.id).cut.peek.length, 3, 'cutter sees the cut');
+    assert.equal(g.view(other.id).cut, null, 'others do not');
+  }
+});
+
+test('a joker at the cut point goes to the cutter', () => {
+  const g = new Game();
+  g.addPlayer('a', 'A');
+  g.addPlayer('b', 'B');
+  g.start();
+  // Put a joker exactly where a cut at 0 lands (index 3).
+  const j = g.stock.findIndex(c => c.joker);
+  [g.stock[3], g.stock[j]] = [g.stock[j], g.stock[3]];
+  const jokerId = g.stock[3].id;
+  assert.ok(g.apply(g.cutter.id, { type: 'cut', at: 0 }).ok);
+  assert.ok(g.cutter.hand.some(c => c.id === jokerId));
+  assert.ok(g.cutResult.kept.includes(jokerId));
 });

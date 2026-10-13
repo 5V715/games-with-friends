@@ -82,6 +82,11 @@
       <header class="opponents" id="opponents"></header>
 
       <div class="table" id="table">
+        <div class="cut-panel" id="cut-panel" hidden>
+          <h2 id="cut-title">Cut the deck</h2>
+          <p class="hint" id="cut-hint">Tap anywhere on the deck to cut it. You'll see the 3 cards at the cut — any joker among them is yours!</p>
+          <div class="cut-deck" id="cut-deck" role="slider" aria-label="Where to cut the deck"></div>
+        </div>
         <div class="melds" id="melds"></div>
       </div>
 
@@ -127,6 +132,14 @@
       <button class="btn primary host-only" id="btn-next-round">Next round</button>
       <p class="guest-only waiting">Waiting for the host…</p>
     </div>
+  </dialog>
+
+  <!-- Cut result (only the cutter) -->
+  <dialog id="dlg-cut" class="sheet">
+    <h2 id="cut-result-title">Your cut</h2>
+    <div class="cut-peek" id="cut-peek"></div>
+    <p class="hint" id="cut-result-text"></p>
+    <div class="dlg-actions"><button class="btn primary" data-close>Play</button></div>
   </dialog>
 
   <!-- In-game menu -->
@@ -198,6 +211,9 @@
     <h2>How to play</h2>
     <div class="rules">
       <p>110 cards: two decks plus 6 jokers. Everyone gets 12 cards; the starting player gets 13 and begins by discarding (no draw on the first turn). Get rid of all your cards first.</p>
+      <h3>Cutting the deck</h3>
+      <p>Before each round the player to the dealer's right cuts the deck and looks at the 3 cards at the cut.
+        Any jokers among them they keep (they count towards their 12 cards).</p>
       <h3>Your turn</h3>
       <ol>
         <li><b>Draw</b> – tap the stock. Once you are out, you may take the top card of the discard pile instead.</li>

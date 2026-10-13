@@ -1,6 +1,10 @@
 // Authoritative Rommé game state. Runs on the host (or in practice mode);
 // guests only ever see the per-player views produced by view().
 //
+// Round start: the player before the dealer cuts the deck ("abheben") and
+// looks at the 3 cards at the cut; any jokers among them they keep (they
+// count towards their 12 cards). Then everyone gets 12 cards, the starter 13.
+//
 // Turn flow: draw (stock, or the discard pile once you are out) → optionally
 // meld / lay off / swap jokers → discard one card. A player's first meld must
 // be worth at least 40 points; laying off and joker swaps need you to be out. The round ends when a player has no cards left; everyone else
@@ -11,6 +15,7 @@ import { createDeck, shuffle, penalty, describe } from './cards.js';
 import { analyzeMeld, layOff, swapJoker, MIN_INITIAL_MELD } from './rules.js';
 
 export const HAND_SIZE = 12;
+export const CUT_PEEK = 3;
 export const MIN_PLAYERS = 2;
 export const MAX_PLAYERS = 6;
 
@@ -53,6 +58,18 @@ export class Game {
     return this.players[this.turn];
   }
 
+  get cutter() {
+    const n = this.players.length;
+    return this.players[(this.dealer - 1 + n) % n];
+  }
+
+  // The player who has to act next (cutter during the cut, else whose turn).
+  get actor() {
+    if (this.phase === 'cut') return this.cutter;
+    if (this.phase === 'draw' || this.phase === 'play') return this.current;
+    return null;
+  }
+
   start() {
     if (this.players.length < MIN_PLAYERS) throw new Error(`Need at least ${MIN_PLAYERS} players`);
     this.round = 0;
@@ -64,24 +81,48 @@ export class Game {
   startRound() {
     this.round++;
     this.dealer = (this.dealer + 1) % this.players.length;
-    const deck = shuffle(createDeck());
     for (const p of this.players) {
-      p.hand = deck.splice(0, HAND_SIZE);
+      p.hand = [];
       p.cameOut = false;
       p.cameOutTurn = -1;
     }
+    this.stock = shuffle(createDeck());
+    this.discard = [];
+    this.melds = [];
     this.turn = (this.dealer + 1) % this.players.length;
+    this.turnNo = 0;
+    this.drawnFromDiscard = null;
+    this.result = null;
+    this.cutResult = null;
+    this.phase = 'cut';
+    this.say(`Round ${this.round} — ${this.cutter.name} cuts the deck`);
+  }
+
+  // `at` is where to cut, as a fraction 0..1 of the deck.
+  #cut(p, at) {
+    if (this.cutter !== p) throw new Error('Only the cutter can cut the deck');
+    const deck = this.stock;
+    const frac = Number.isFinite(at) ? Math.min(1, Math.max(0, at)) : 0.5;
+    const idx = CUT_PEEK + Math.round(frac * (deck.length - 2 * CUT_PEEK));
+    const cut = deck.slice(idx).concat(deck.slice(0, idx));
+    const peek = cut.slice(0, CUT_PEEK);
+    const kept = peek.filter(c => c.joker);
+    const rest = cut.filter(c => !kept.includes(c));
+    p.hand.push(...kept);
+    this.cutResult = { player: p.id, peek, kept: kept.map(c => c.id) };
+    this.#deal(rest);
+    this.say((kept.length
+      ? `${p.name} cut and kept ${kept.length === 1 ? 'a joker' : kept.length + ' jokers'}!`
+      : `${p.name} cut — no joker.`) + ` ${this.current.name} starts`);
+  }
+
+  #deal(deck) {
+    for (const p of this.players) p.hand.push(...deck.splice(0, HAND_SIZE - p.hand.length));
     // The starting player gets one extra card instead of drawing, so the
     // player whose turn it is always holds 13 cards and starts the pile.
     this.current.hand.push(deck.pop());
-    this.discard = [];
     this.stock = deck;
-    this.melds = [];
-    this.turnNo = 0;
     this.phase = 'play';
-    this.drawnFromDiscard = null;
-    this.result = null;
-    this.say(`Round ${this.round} — ${this.current.name} starts`);
   }
 
   say(text) {
@@ -107,6 +148,11 @@ export class Game {
       this.startRound();
       return;
     }
+    if (action.type === 'cut') {
+      if (this.phase !== 'cut') throw new Error('The deck has already been cut');
+      return this.#cut(p, action.at);
+    }
+    if (this.phase === 'cut') throw new Error(`Waiting for ${this.cutter.name} to cut the deck`);
     if (this.phase !== 'draw' && this.phase !== 'play') throw new Error('No round in progress');
     if (this.current !== p) throw new Error("It's not your turn");
 
@@ -269,6 +315,9 @@ export class Game {
       phase: this.phase,
       round: this.round,
       turn: this.phase === 'draw' || this.phase === 'play' ? this.current?.id : null,
+      cutter: this.phase === 'cut' ? this.cutter.id : null,
+      // Only the cutter sees which cards were at the cut.
+      cut: this.cutResult && this.cutResult.player === playerId ? this.cutResult : null,
       players: this.players.map(p => ({
         id: p.id, name: p.name, bot: p.bot, count: p.hand.length, cameOut: p.cameOut, score: p.score,
       })),

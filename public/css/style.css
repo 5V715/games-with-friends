@@ -249,6 +249,7 @@ body.is-host .guest-only { display: none !important; }
   min-height: 0;
 }
 
+.melds[hidden] { display: none; }
 .melds {
   display: flex;
   flex-wrap: wrap;
@@ -322,6 +323,54 @@ body.is-host .guest-only { display: none !important; }
     repeating-linear-gradient(45deg, #9c1b2c 0 6px, #b52a3c 6px 12px);
   border: 3px solid #fff;
 }
+
+/* ---------- Cutting the deck ---------- */
+
+.cut-panel {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  padding: 16px 8px;
+  text-align: center;
+}
+.cut-panel[hidden] { display: none; }
+.cut-panel h2 { margin: 0; font-size: 20px; }
+.cut-panel .hint { max-width: 420px; }
+.cut-deck {
+  position: relative;
+  width: min(100%, 560px);
+  height: calc(var(--ch) + 28px);
+  padding: 14px 0;
+  display: flex;
+  justify-content: center;
+  touch-action: none;
+}
+.cut-deck .card {
+  --cw: clamp(44px, 12vw, 70px);
+  margin-left: calc(var(--cw) * -0.82);
+  transition: transform .12s ease;
+  box-shadow: -1px 0 2px rgba(0, 0, 0, .3);
+}
+.cut-deck .card:first-child { margin-left: 0; }
+.cut-deck .card.lift { transform: translateY(-14px); }
+.cut-deck.mine { cursor: pointer; }
+.cut-deck.mine::after {
+  content: '';
+  position: absolute;
+  top: 4px; bottom: 4px;
+  left: var(--cut-x, -10px);
+  width: 3px;
+  border-radius: 2px;
+  background: var(--gold);
+  box-shadow: 0 0 10px var(--gold);
+  pointer-events: none;
+}
+.cut-deck.waiting { opacity: .7; animation: pulse 1.6s infinite; border-radius: 12px; }
+
+.cut-peek { display: flex; gap: 10px; justify-content: center; margin: 8px 0 4px; }
+.cut-peek .card.kept { box-shadow: 0 0 0 3px var(--gold), 0 0 18px rgba(242, 193, 78, .7); transform: translateY(-6px); }
+.cut-peek .card.back-to-deck { opacity: .55; }
 
 /* ---------- Piles & status ---------- */
 

@@ -110,7 +110,7 @@ export class HostSession extends EventTarget {
         g.start();
         return;
       case 'addBot': {
-        const used = new Set(g.players.map(p => p.name));
+        const used = new Set(g.players.map(p => p.name.replace(/\s*🤖$/, '')));
         const name = BOT_NAMES.find(n => !used.has(n)) || 'Bot';
         g.addPlayer('bot-' + Math.random().toString(36).slice(2, 8), name + ' 🤖', { bot: true });
         return;
@@ -173,15 +173,15 @@ export class HostSession extends EventTarget {
   #scheduleBot() {
     clearTimeout(this.botTimer);
     const g = this.game;
-    if (g.phase !== 'draw' && g.phase !== 'play') return;
-    const cur = g.current;
+    const cur = g.actor;
+    if (!cur) return;
     const away = !cur.bot && cur.id !== this.myId && !this.playerToPeer.has(cur.id);
     if (!cur.bot && !away) return;
     this.botTimer = setTimeout(() => {
-      if (g.current !== cur) return;
+      if (g.actor !== cur) return;
       const action = botStep(g.view(cur.id));
       if (action && g.apply(cur.id, action).ok) this.broadcast();
-    }, cur.bot || g.phase === 'play' ? BOT_DELAY : AWAY_DELAY);
+    }, cur.bot || g.phase === 'play' ? (g.phase === 'cut' ? BOT_DELAY * 2 : BOT_DELAY) : AWAY_DELAY);
   }
 
   close() {

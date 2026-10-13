@@ -98,6 +98,8 @@ export function botStep(view) {
   const me = view.players.find(p => p.id === view.you);
   const hand = view.hand;
 
+  if (view.phase === 'cut') return { type: 'cut', at: Math.random() };
+
   if (view.phase === 'draw') {
     const top = view.discardTop;
     if (top && me.cameOut) {
