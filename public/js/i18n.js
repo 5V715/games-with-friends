@@ -85,6 +85,7 @@ const STRINGS = {
     'log.gameOver': 'Game over — {names} wins with {points} points',
 
     // ---- home
+    'game.romme': 'Rommé',
     'home.tagline': 'Play rummy with friends — browser to browser, no account needed.',
     'home.name': 'Your name',
     'home.namePh': 'Name',
@@ -350,6 +351,7 @@ const STRINGS = {
     'log.won': (p) => `${p.name} gewinnt Runde ${p.round}${p.handRomme ? ' — Hand! Punkte ×2' : '!'}`,
     'log.gameOver': 'Spiel vorbei — {names} gewinnt mit {points} Punkten',
 
+    'game.romme': 'Rommé',
     'home.tagline': 'Rommé mit Freunden — direkt von Browser zu Browser, ohne Konto.',
     'home.name': 'Dein Name',
     'home.namePh': 'Name',
@@ -593,7 +595,11 @@ export function tr(language, key, params = {}) {
   if (s == null) return key;
   // Arrays of card codes are labelled in the target language.
   const p = {};
-  for (const [k, v] of Object.entries(params)) p[k] = Array.isArray(v) ? v.map(c => cardName(c, language)).join(' ') : v;
+  // A param { t: key, p: params } is itself translated (nested labels).
+  for (const [k, v] of Object.entries(params)) {
+    p[k] = Array.isArray(v) ? v.map(c => cardName(c, language)).join(' ')
+      : v && typeof v === 'object' && v.t ? tr(language, v.t, v.p || {}) : v;
+  }
   if (typeof s === 'function') return s(p);
   return s.replace(/\{(\w+)\}/g, (_, k) => (p[k] ?? ''));
 }
@@ -617,6 +623,11 @@ export function applyI18n(root = document) {
   for (const el of root.querySelectorAll('[data-i18n-ph]')) el.placeholder = t(el.dataset.i18nPh);
   for (const el of root.querySelectorAll('[data-i18n-aria]')) el.setAttribute('aria-label', t(el.dataset.i18nAria));
   for (const el of root.querySelectorAll('[data-i18n-title]')) el.title = t(el.dataset.i18nTitle);
+}
+
+// Games register their own texts: addStrings({ en: {...}, de: {...} }).
+export function addStrings(dicts) {
+  for (const [code, dict] of Object.entries(dicts)) Object.assign(STRINGS[code] ||= {}, dict);
 }
 
 // For tests: the raw dictionaries.

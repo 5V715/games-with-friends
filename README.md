@@ -10,6 +10,21 @@ between browsers, so game traffic never goes through a server.
   **OCI image**. It only introduces players to each other with table codes, and is
   optional.
 
+## Games
+
+When you create a table (or practice against bots), pick one of these games. The
+host can still switch in the lobby.
+
+| Game | Players | In short |
+| --- | --- | --- |
+| **Rommé** | 2–6 | German rummy: sets and runs, 40 to come out, cutting the deck, Hand ×2, majority vote between rounds |
+| **UNO** | 2–8 | Match color/number/symbol, Skip/Reverse/+2/Wild/Wild +4, call UNO or get caught (+2), first to 500 |
+| **Monopoly Deal** | 2–5 | Three complete property sets win; rent, Debt Collector, Birthday, Sly/Forced Deal, Deal Breaker, Just Say No, houses/hotels |
+
+Every game runs on the host's browser, has bots, works in German and English, and
+supports push to talk. UNO and Monopoly Deal are trademarks of Mattel and Hasbro.
+This is a private fan implementation with its own card designs.
+
 ## Features
 
 - Touch-first UI: tap to select, drag to reorder your hand, drag onto melds or the
@@ -57,7 +72,11 @@ between browsers, so game traffic never goes through a server.
 | `public/js/bot.js` | Computer player |
 | `public/js/net.js` | WebRTC/ICE links, signaling client, invite codes |
 | `public/js/session.js` | Host/guest sessions between the engine and the network |
-| `public/js/main.js` | UI rendering and touch interaction |
+| `public/js/main.js` | Screens, lobby, Rommé UI, touch interaction |
+| `public/js/games/index.js` | Registry of the games (engine, bot, rules, player limits) |
+| `public/js/games/uno/` | UNO: engine, bot, screen, texts |
+| `public/js/games/deal/` | Monopoly Deal: cards, engine, bot, screen, texts |
+| `public/js/ui-kit.js` | Choice and multi-select sheets used by the game screens |
 | `public/js/i18n.js` | German and English texts, language detection |
 | `public/js/voice.js` | Push-to-talk recording, chunking and playback |
 | `public/config.js` | `SIGNALING_URL` for the deployed site |

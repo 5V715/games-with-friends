@@ -39,6 +39,7 @@ export const MAX_PLAYERS = 6;
 
 export class Game {
   constructor() {
+    this.type = 'romme';
     this.phase = 'lobby';
     this.players = [];
     this.round = 0;
@@ -94,6 +95,12 @@ export class Game {
   // Players who still have to vote on another round.
   get pendingVoters() {
     return this.phase === 'roundOver' ? this.players.filter(p => !(p.id in this.votes)) : [];
+  }
+
+  // Everyone who has to act now (drives bots and players who are away).
+  get actors() {
+    if (this.phase === 'roundOver') return this.pendingVoters;
+    return this.actor ? [this.actor] : [];
   }
 
   start() {
@@ -357,6 +364,7 @@ export class Game {
     const me = this.player(playerId);
     const top = this.discard[this.discard.length - 1] || null;
     return {
+      game: 'romme',
       you: playerId,
       phase: this.phase,
       round: this.round,

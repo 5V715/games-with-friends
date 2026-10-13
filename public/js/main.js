@@ -5,6 +5,12 @@ import { analyzeMeld, layOff, swapJoker } from './rules.js';
 import { HostSession, GuestSession } from './session.js';
 import { PushToTalk, VoicePlayer, voiceSupported, VOICE_MAX_MS } from './voice.js';
 import { t, msg, applyI18n, setLang, savedLang, LANGS, rankName } from './i18n.js';
+import { GAMES, GAME_IDS, gameInfo, DEFAULT_GAME } from './games/index.js';
+import { createUnoUI } from './games/uno/ui.js';
+import { createDealUI } from './games/deal/ui.js';
+import { closeChoice } from './ui-kit.js';
+
+const PLAY_UIS = { uno: createUnoUI, deal: createDealUI };
 import {
   HostNet, GuestNet, getNetConfig, randomId, randomRoomCode, loadTurnSettings, saveTurnSettings,
   signalingUrl, savedSignalingUrl, saveSignalingUrl, defaultSignalingUrl,
@@ -169,6 +175,7 @@ function attach(session) {
   ui.knownMelds = new Set();
   ui.link = null;
   ui.speaking = null;
+  ui.play = null;
   document.body.classList.toggle('is-host', session.isHost);
 
   session.addEventListener('state', (ev) => {
@@ -231,11 +238,14 @@ function render() {
   const v = ui.view;
   if (!v) return;
   const talk = ui.mode !== 'practice' && voiceSupported();
-  $('#btn-ptt').hidden = !talk;
-  $('#btn-ptt-lobby').hidden = !talk;
+  for (const b of $$('.btn.ptt')) b.hidden = !talk;
   if (v.phase === 'lobby') {
     show('lobby');
     renderLobby();
+    return;
+  }
+  if (v.game && v.game !== 'romme') {
+    renderPlay(v);
     return;
   }
   show('game');
@@ -248,6 +258,104 @@ function render() {
   renderActions();
   renderCut();
   renderRoundOver();
+}
+
+// ---------------------------------------------------------------- UNO / Monopoly Deal screen
+
+function playUI(type) {
+  if (ui.play?.type !== type) {
+    ui.play = {
+      type,
+      api: PLAY_UIS[type]({
+        els: { players: $('#play-players'), main: $('#play-main'), status: $('#play-status'), hand: $('#play-hand'), buttons: $('#play-buttons') },
+        t, msg, toast, buzz,
+        act: (a) => act(a),
+        speaking: () => ui.speaking,
+        dotClass: (p) => (p.id === ui.view.you && !ui.session.isHost ? linkDotClass() : dotClass(p)),
+        fitHand: (hand) => fitCards(hand),
+        addSheetButton: (box, show = true) => {
+          if (!show || !ui.view.history?.length) return;
+          const b = document.createElement('button');
+          b.className = 'btn icon sheet-btn';
+          b.textContent = '📊';
+          b.title = t('sheet.open');
+          b.setAttribute('aria-label', t('sheet.open'));
+          b.onclick = openSheet;
+          box.append(b);
+        },
+      }),
+    };
+  }
+  return ui.play.api;
+}
+
+// Overlapping cards that always fit the width (like the Rommé hand).
+function fitCards(hand) {
+  const first = hand.firstElementChild;
+  if (!first) return;
+  const n = hand.children.length;
+  const cw = first.offsetWidth;
+  const step = n > 1 ? Math.min(cw + 6, (hand.clientWidth - cw) / (n - 1)) : cw;
+  hand.style.setProperty('--step', `${Math.max(step, 14)}px`);
+}
+
+function renderPlay(v) {
+  show('play');
+  closeDialog('dlg-invite');
+  const api = playUI(v.game);
+  api.render(v);
+  renderResult(v, api.result(v));
+}
+
+// Shared result dialog (round result + vote, or final standings).
+function renderResult(v, res) {
+  const open = $('#btn-result-open');
+  open.hidden = !res;
+  if (!res) {
+    if (ui.resultFor === 'play') closeDialog('dlg-round');
+    return;
+  }
+  ui.resultFor = 'play';
+  open.textContent = res.over ? t('over.open') : t('round.open');
+  $('#round-title').textContent = res.title;
+  $('#round-sub').textContent = res.sub;
+  $('#round-sub').hidden = !res.sub;
+  $('#round-scores').innerHTML = res.html;
+  $('#vote-box').hidden = !res.vote;
+  $('#over-box').hidden = !res.over;
+  if (res.vote) renderVotes();
+  if (ui.shownResultKey === res.key) return;
+  ui.shownResultKey = res.key;
+  closeChoice();
+  if (res.won) buzz([40, 60, 40]);
+  setTimeout(() => openDialog('dlg-round'), 500);
+}
+
+// ---------------------------------------------------------------- game choice
+
+function savedGame() {
+  const g = store('local', 'romme.game');
+  return GAMES[g] ? g : DEFAULT_GAME;
+}
+
+function renderGamePick(box, selected, onPick) {
+  box.innerHTML = '';
+  for (const id of GAME_IDS) {
+    const b = document.createElement('button');
+    b.className = 'game-opt' + (id === selected ? ' on' : '');
+    b.setAttribute('role', 'radio');
+    b.setAttribute('aria-checked', id === selected);
+    b.innerHTML = `<span class="game-icon">${GAMES[id].icon}</span><span>${esc(t('game.' + id))}</span>`;
+    b.onclick = () => onPick(id);
+    box.append(b);
+  }
+}
+
+function renderHomeGamePick() {
+  renderGamePick($('#game-pick'), savedGame(), (id) => {
+    store('local', 'romme.game', id);
+    renderHomeGamePick();
+  });
 }
 
 // ---------------------------------------------------------------- cutting the deck
@@ -365,9 +473,17 @@ function renderLobby() {
     }
     list.append(li);
   }
-  $('#btn-start').disabled = v.players.length < 2;
-  $('#btn-add-bot').disabled = v.players.length >= 6;
-  $('#btn-manual-invite').disabled = v.players.length >= 6;
+  const info = gameInfo(v.game);
+  $('#lobby-game').innerHTML = `<span class="game-icon">${info.icon}</span> ${esc(t('game.' + info.id))}`;
+  if (ui.session.isHost) {
+    renderGamePick($('#lobby-game-pick'), info.id, (id) => {
+      store('local', 'romme.game', id);
+      ui.session.act({ type: 'setGame', game: id });
+    });
+  }
+  $('#btn-start').disabled = v.players.length < info.min;
+  $('#btn-add-bot').disabled = v.players.length >= info.max;
+  $('#btn-manual-invite').disabled = v.players.length >= info.max;
   renderLink();
 }
 
@@ -577,14 +693,16 @@ function renderSheet(table) {
   const players = v.players;
   const head = players.map(p => `<th class="num">${esc(p.id === v.you ? t('game.you') : p.name)}</th>`).join('');
   let html = `<tr><th>${t('sheet.round')}</th>${head}</tr>`;
+  const uno = v.game === 'uno'; // UNO: the winner scores, highest total wins
   for (const h of v.history) {
     const cells = players.map(p => {
-      const pts = h.penalties[p.id] ?? 0;
-      return `<td class="num${p.id === h.winner ? ' won' : ''}">${p.id === h.winner ? '🏆 0' : pts}</td>`;
+      const won = p.id === h.winner;
+      const pts = uno ? (won ? `🏆 +${h.gained[p.id]}` : '–') : (won ? '🏆 0' : h.penalties[p.id] ?? 0);
+      return `<td class="num${won ? ' won' : ''}">${pts}</td>`;
     }).join('');
     html += `<tr><td>${h.round}${h.handRomme ? ` <span class="chip warn">${t('sheet.hand')}</span>` : ''}</td>${cells}</tr>`;
   }
-  const best = Math.min(...players.map(p => p.score));
+  const best = (uno ? Math.max : Math.min)(...players.map(p => p.score));
   const totals = players.map(p => `<td class="num${p.score === best ? ' best' : ''}">${p.score}</td>`).join('');
   html += `<tr class="total"><td>${t('sheet.total')}</td>${totals}</tr>`;
   table.innerHTML = html;
@@ -616,6 +734,7 @@ function renderVotes() {
 
 function renderRoundOver() {
   const v = ui.view;
+  ui.resultFor = 'romme';
   const over = v.phase === 'gameOver';
   const open = $('#btn-round-open');
   open.hidden = v.phase !== 'roundOver' && !over;
@@ -1024,7 +1143,7 @@ function bindPushToTalk(btn) {
 async function startPractice() {
   ui.mode = 'practice';
   ui.room = null;
-  const s = new HostSession({ name: playerName(), clientId });
+  const s = new HostSession({ name: playerName(), clientId, gameType: savedGame() });
   attach(s);
   const bots = Number($('#bot-count').value) || 2;
   for (let i = 0; i < bots; i++) s.act({ type: 'addBot' });
@@ -1048,7 +1167,7 @@ async function hostOnline() {
       toast(t('toast.noSignalHost'));
     }
     ui.room = room;
-    const s = new HostSession({ name: playerName(), clientId, net, room });
+    const s = new HostSession({ name: playerName(), clientId, net, room, gameType: savedGame() });
     attach(s);
     net.addEventListener('signalclosed', (ev) => {
       if (ui.session !== s) return;
@@ -1097,6 +1216,8 @@ async function joinOnline(room, { quiet = false } = {}) {
 }
 
 function renderLobbyConnecting(room) {
+  $('#lobby-game').textContent = '';
+  $('#lobby-game-pick').innerHTML = '';
   $('#room-code').textContent = room || '—';
   $('#btn-share').hidden = !room;
   $('#room-box').hidden = false;
@@ -1193,7 +1314,14 @@ async function makeManualAnswer() {
 
 function openMenu() {
   if (!ui.view) return;
-  renderScoresTable($('#menu-scores'), { withHands: false });
+  if (ui.view.game && ui.view.game !== 'romme' && ui.play) {
+    const rows = ui.play.api.standings(ui.view);
+    $('#menu-scores').innerHTML = `<tr><th>${t('scores.player')}</th><th class="num">${t('scores.total')}</th></tr>` +
+      rows.map(r => `<tr><td>${esc(r.id === ui.view.you ? t('game.you') : r.name)}</td><td class="num">${esc(r.value)}</td></tr>`).join('');
+  } else {
+    renderScoresTable($('#menu-scores'), { withHands: false });
+  }
+  $('#btn-menu-sheet').hidden = !ui.view.history?.length;
   const info = $('#menu-conn');
   if (ui.mode === 'practice') info.textContent = t('menu.practice');
   else if (ui.session?.isHost) {
@@ -1237,6 +1365,7 @@ function saveSettings() {
 // Applies the current language to all static and rendered text.
 function translatePage() {
   applyI18n();
+  renderHomeGamePick();
   for (const o of $('#bot-count').options) o.textContent = t('home.bots', { n: Number(o.value) });
   const sel = $('#lang-select');
   sel.options[0].textContent = t('settings.langAuto');
@@ -1333,6 +1462,9 @@ function bind() {
   cutDeck.addEventListener('pointerup', onCutUp);
 
   bindPushToTalk($('#btn-ptt'));
+  bindPushToTalk($('#btn-ptt2'));
+  $('#btn-menu2').onclick = openMenu;
+  $('#btn-result-open').onclick = () => openDialog('dlg-round');
   bindPushToTalk($('#btn-ptt-lobby'));
   // Mobile browsers only play audio after a gesture: unlock on the first tap.
   document.addEventListener('pointerdown', () => voicePlayer.unlock(), { capture: true, once: true });
@@ -1349,6 +1481,11 @@ function bind() {
     const open = ev.target.closest('[data-open]');
     if (open) {
       if (open.dataset.open === 'dlg-settings') openSettings();
+      if (open.dataset.open === 'dlg-rules') {
+        const game = ui.view && ui.view.phase !== 'lobby' ? ui.view.game : ui.view?.game || savedGame();
+        $('#dlg-rules h2').textContent = `${t('rules.title')} · ${t('game.' + gameInfo(game).id)}`;
+        $('#dlg-rules .rules').innerHTML = t(gameInfo(game).rules);
+      }
       openDialog(open.dataset.open);
     }
     const close = ev.target.closest('[data-close]');

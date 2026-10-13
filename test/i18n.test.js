@@ -1,6 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { _strings, tr, LANGS } from '../public/js/i18n.js';
+import '../public/js/games/index.js'; // registers every game's texts
 import { Game } from '../public/js/engine.js';
 
 const placeholders = (s) => (typeof s === 'string' ? [...s.matchAll(/\{(\w+)\}/g)].map(m => m[1]).sort() : null);

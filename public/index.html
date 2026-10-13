@@ -26,6 +26,8 @@
           <input id="name" type="text" maxlength="20" autocomplete="nickname" placeholder="Name" data-i18n-ph="home.namePh">
         </label>
 
+        <div class="game-pick" id="game-pick" role="radiogroup" aria-label="Game"></div>
+
         <button class="btn primary big" id="btn-host" data-i18n="home.create">Create table</button>
 
         <div class="join-row">
@@ -60,6 +62,8 @@
         <span class="link-dot" id="lobby-link" title="Connection"></span>
       </header>
       <div class="lobby-body">
+        <div class="lobby-game" id="lobby-game"></div>
+        <div class="game-pick host-only" id="lobby-game-pick" role="radiogroup" aria-label="Game"></div>
         <div class="room-box" id="room-box">
           <span class="room-label" data-i18n="lobby.code">Table code</span>
           <span class="room-code" id="room-code">—</span>
@@ -122,6 +126,24 @@
       </footer>
     </section>
 
+    <!-- Game screen for UNO and Monopoly Deal (filled by the game's UI module) -->
+    <section id="screen-play" class="screen">
+      <header class="opponents" id="play-players"></header>
+      <div class="play-main" id="play-main"></div>
+      <div class="play-bar">
+        <div class="status play-status" id="play-status"></div>
+        <button class="btn small primary pulse" id="btn-result-open" hidden></button>
+      </div>
+      <div class="hand-wrap play-hand-wrap">
+        <div class="play-hand" id="play-hand"></div>
+      </div>
+      <footer class="actions">
+        <button class="btn icon" id="btn-menu2" aria-label="Menu" data-i18n-aria="game.menu">☰</button>
+        <div class="play-buttons" id="play-buttons"></div>
+        <button class="btn icon ptt" id="btn-ptt2" aria-label="Hold to talk" title="Hold to talk" data-i18n-aria="ptt.aria" data-i18n-title="ptt.aria"><canvas class="ptt-wave" aria-hidden="true"></canvas><span class="ptt-label">🎤</span></button>
+      </footer>
+    </section>
+
     <div class="toast" id="toast" role="status" aria-live="polite"></div>
     <div class="ptt-indicator" id="ptt-indicator" aria-live="polite" hidden>
       <span class="rec-dot"></span><span id="ptt-time">0s</span>
@@ -152,6 +174,14 @@
     <div class="dlg-actions">
       <button class="btn ghost" data-close data-i18n="round.showTable">Show table</button>
     </div>
+  </dialog>
+
+  <!-- Generic choice / multi-select sheet (ui-kit.js) -->
+  <dialog id="dlg-choice" class="sheet">
+    <h2 class="choice-title"></h2>
+    <div class="choice-text"></div>
+    <div class="choice-options dlg-actions column"></div>
+    <div class="dlg-actions"><button class="btn ghost choice-cancel" hidden></button></div>
   </dialog>
 
   <!-- Score sheet: every round -->

@@ -8,9 +8,9 @@
 //   'link'   { state, route } (guest only) – connection quality to the host
 //   'voice'  { from, blob } – a push-to-talk clip from another player
 
-import { Game, GameError, MAX_PLAYERS } from './engine.js';
+import { GameError } from './engine.js';
 import { tr } from './i18n.js';
-import { botStep } from './bot.js';
+import { gameInfo } from './games/index.js';
 import { VoiceAssembler, clipToMessages, validVoiceMessage } from './voice.js';
 
 const BOT_NAMES = ['Ada', 'Bruno', 'Clara', 'Dieter', 'Erika', 'Fritz', 'Greta', 'Hans'];
@@ -31,13 +31,14 @@ function cleanId(id) {
 }
 
 export class HostSession extends EventTarget {
-  constructor({ name, clientId, net = null, room = null }) {
+  constructor({ name, clientId, net = null, room = null, gameType = 'romme' }) {
     super();
     this.isHost = true;
     this.net = net;
     this.room = room;
     this.myId = cleanId(clientId);
-    this.game = new Game();
+    this.info = gameInfo(gameType);
+    this.game = this.info.create();
     this.game.addPlayer(this.myId, name);
     this.peerToPlayer = new Map();
     this.playerToPeer = new Map();
@@ -97,7 +98,7 @@ export class HostSession extends EventTarget {
         this.net.send(peerId, errorMsg('err.gameStartedJoin', {}, { fatal: true }));
         return;
       }
-      if (this.game.players.length >= MAX_PLAYERS) {
+      if (this.game.players.length >= this.info.max) {
         this.net.send(peerId, errorMsg('err.tableFull', {}, { fatal: true }));
         return;
       }
@@ -142,9 +143,21 @@ export class HostSession extends EventTarget {
         g.start();
         return;
       case 'addBot': {
+        if (g.players.length >= this.info.max) throw new GameError('err.tableFull');
         const used = new Set(g.players.map(p => p.name.replace(/\s*🤖$/, '')));
         const name = BOT_NAMES.find(n => !used.has(n)) || 'Bot';
         g.addPlayer('bot-' + Math.random().toString(36).slice(2, 8), name + ' 🤖', { bot: true });
+        return;
+      }
+      case 'setGame': {
+        // Switch the game in the lobby; everyone keeps their seat.
+        if (g.phase !== 'lobby') throw new GameError('err.gameStarted');
+        const info = gameInfo(action.game);
+        if (g.players.length > info.max) throw new GameError('err.tableFull');
+        const next = info.create();
+        for (const p of g.players) next.addPlayer(p.id, p.name, { bot: p.bot });
+        this.info = info;
+        this.game = next;
         return;
       }
       case 'removePlayer': {
@@ -163,11 +176,13 @@ export class HostSession extends EventTarget {
   }
 
   apply(pid, action) {
+    this.lastAuto = null; // a real move: the next auto-play waits the grace period again
     if (!action || typeof action !== 'object') return { ok: false, error: 'Bad action', key: 'err.badAction' };
     let res;
-    if (['start', 'addBot', 'removePlayer', 'newGame'].includes(action.type) && pid !== this.myId) {
+    const hostOnly = ['start', 'addBot', 'removePlayer', 'newGame', 'setGame'].includes(action.type);
+    if (hostOnly && pid !== this.myId) {
       res = { ok: false, error: 'Only the host can do that', key: 'err.hostOnly' };
-    } else if (['start', 'addBot', 'removePlayer', 'newGame'].includes(action.type)) {
+    } else if (hostOnly) {
       try { this.#hostAction(action); res = { ok: true }; } catch (e) { res = { ok: false, error: e.message, key: e.key, params: e.params }; }
     } else {
       res = this.game.apply(pid, action);
@@ -206,16 +221,18 @@ export class HostSession extends EventTarget {
     clearTimeout(this.botTimer);
     const g = this.game;
     const isAway = (p) => !p.bot && p.id !== this.myId && !this.playerToPeer.has(p.id);
-    // After a round, bots (and players who are away) vote to play on.
-    const cur = g.phase === 'roundOver' ? g.pendingVoters.find(p => p.bot || isAway(p)) : g.actor;
+    // Bots act for themselves; players who lost their connection are
+    // auto-played after a grace period (then quickly for the rest of the turn).
+    const cur = g.actors.find(p => p.bot || isAway(p));
     if (!cur) return;
-    const away = isAway(cur);
-    if (!cur.bot && !away) return;
+    const quick = cur.bot || this.lastAuto === cur.id;
+    const delay = quick ? (g.phase === 'cut' ? BOT_DELAY * 2 : BOT_DELAY) : AWAY_DELAY;
     this.botTimer = setTimeout(() => {
-      if (g.phase === 'roundOver' ? !g.pendingVoters.includes(cur) : g.actor !== cur) return;
-      const action = botStep(g.view(cur.id));
+      if (this.game !== g || !g.actors.includes(cur)) return;
+      const action = this.info.bot(g.view(cur.id));
+      this.lastAuto = cur.id;
       if (action && g.apply(cur.id, action).ok) this.broadcast();
-    }, cur.bot || g.phase === 'play' ? (g.phase === 'cut' ? BOT_DELAY * 2 : BOT_DELAY) : AWAY_DELAY);
+    }, delay);
   }
 
   close() {
