@@ -84,7 +84,7 @@ Players can also point the game at a server with `?signal=https://…` or in
 ### Signaling server → OCI image
 
 [`.github/workflows/server-image.yml`](.github/workflows/server-image.yml) builds a
-multi-arch (amd64/arm64) OCI image and pushes it to
+multi-arch (amd64, arm64 and arm/v7 – e.g. Raspberry Pi with 64- or 32-bit OS) OCI image and pushes it to
 `ghcr.io/<owner>/romme-signaling` on every push to `main` and for `v*` tags.
 
 Build and run it yourself:
