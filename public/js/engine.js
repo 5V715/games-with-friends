@@ -10,7 +10,7 @@
 import { createDeck, shuffle, penalty, describe } from './cards.js';
 import { analyzeMeld, layOff, swapJoker, MIN_INITIAL_MELD } from './rules.js';
 
-export const HAND_SIZE = 13;
+export const HAND_SIZE = 12;
 export const MIN_PLAYERS = 2;
 export const MAX_PLAYERS = 6;
 
@@ -70,12 +70,15 @@ export class Game {
       p.cameOut = false;
       p.cameOutTurn = -1;
     }
-    this.discard = [deck.pop()];
+    this.turn = (this.dealer + 1) % this.players.length;
+    // The starting player gets one extra card instead of drawing, so the
+    // player whose turn it is always holds 13 cards and starts the pile.
+    this.current.hand.push(deck.pop());
+    this.discard = [];
     this.stock = deck;
     this.melds = [];
-    this.turn = (this.dealer + 1) % this.players.length;
     this.turnNo = 0;
-    this.phase = 'draw';
+    this.phase = 'play';
     this.drawnFromDiscard = null;
     this.result = null;
     this.say(`Round ${this.round} — ${this.current.name} starts`);

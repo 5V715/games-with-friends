@@ -119,7 +119,8 @@ on the server (`TURN_URL` …) or per device in **Connection settings**.
 
 ## Rules (short)
 
-Everyone gets 13 cards. On your turn: **draw** (from the stock, or from the discard pile once you are out),
+Everyone gets 12 cards; the starting player gets a 13th and opens by discarding
+instead of drawing. On your turn: **draw** (from the stock, or from the discard pile once you are out),
 optionally **meld**, then **discard**.
 
 - **Set:** 3–4 cards of the same rank in different suits.

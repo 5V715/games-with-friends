@@ -10,16 +10,31 @@ function newGame(n) {
   return g;
 }
 
+// Plays the opening move (the starting player only discards), so the next
+// player is in the normal draw phase.
+function afterOpening(n) {
+  const g = newGame(n);
+  assert.ok(g.apply(g.current.id, { type: 'discard', cardId: g.current.hand[0].id }).ok);
+  return g;
+}
+
 test('deal', () => {
   const g = newGame(3);
-  assert.equal(g.phase, 'draw');
-  for (const p of g.players) assert.equal(p.hand.length, 13);
+  assert.equal(g.phase, 'play', 'starting player skips the draw');
+  for (const p of g.players) assert.equal(p.hand.length, p === g.current ? 13 : 12);
+  assert.equal(g.discard.length, 0);
+  assert.equal(g.stock.length, 110 - 36 - 1);
+  const first = g.current;
+  assert.ok(g.apply(first.id, { type: 'discard', cardId: first.hand[0].id }).ok);
+  assert.equal(first.hand.length, 12);
   assert.equal(g.discard.length, 1);
-  assert.equal(g.stock.length, 110 - 39 - 1);
+  assert.equal(g.phase, 'draw');
+  assert.ok(g.apply(g.current.id, { type: 'draw', from: 'stock' }).ok);
+  assert.equal(g.current.hand.length, 13);
 });
 
 test('turn enforcement', () => {
-  const g = newGame(2);
+  const g = afterOpening(2);
   const other = g.players.find(p => p !== g.current);
   assert.equal(g.apply(other.id, { type: 'draw' }).ok, false);
   assert.equal(g.apply(g.current.id, { type: 'discard', cardId: g.current.hand[0].id }).error, 'Draw a card first');
@@ -34,9 +49,9 @@ test('turn enforcement', () => {
 test('views hide other hands', () => {
   const g = newGame(2);
   const v = g.view('p0');
-  assert.equal(v.hand.length, 13);
+  assert.equal(v.hand.length, g.player('p0').hand.length);
   assert.ok(!('hand' in v.players[1]));
-  assert.equal(v.players[1].count, 13);
+  assert.equal(v.players[1].count, g.player('p1').hand.length);
 });
 
 test('bots can finish many rounds without getting stuck', () => {
@@ -60,7 +75,7 @@ test('bots can finish many rounds without getting stuck', () => {
 });
 
 test('discard pile is only available once you are out', () => {
-  const g = newGame(2);
+  const g = afterOpening(2);
   const p = g.current;
   const res = g.apply(p.id, { type: 'draw', from: 'discard' });
   assert.equal(res.ok, false);
@@ -70,7 +85,7 @@ test('discard pile is only available once you are out', () => {
 });
 
 test('first meld needs 40 points; lay off and swap need to be out and on turn', () => {
-  const g = newGame(2);
+  const g = afterOpening(2);
   const p = g.current;
   const other = g.players.find(x => x !== p);
   const card = (id, suit, rank) => ({ id, suit, rank, joker: false });
