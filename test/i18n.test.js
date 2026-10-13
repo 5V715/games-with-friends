@@ -43,3 +43,29 @@ test('engine errors and log entries carry translation keys', () => {
   assert.equal(entry.key, 'log.roundCut');
   assert.equal(tr('de', entry.key, entry.params), `Runde 1 — ${g.cutter.name} hebt ab`);
 });
+
+test('card letters follow the language: J/Q/K in English, B/D/K in German', async () => {
+  const { cardName, rankName } = await import('../public/js/i18n.js');
+  assert.deepEqual([11, 12, 13, 1].map(r => rankName(r, 'en')), ['J', 'Q', 'K', 'A']);
+  assert.deepEqual([11, 12, 13, 1].map(r => rankName(r, 'de')), ['B', 'D', 'K', 'A']);
+  assert.equal(rankName(7, 'de'), '7');
+  assert.equal(cardName('H12', 'de'), 'D♥');
+  assert.equal(cardName('X', 'de'), 'Joker');
+  assert.equal(tr('de', 'log.discarded', { name: 'Ada', card: ['S11'] }), 'Ada hat B♠ abgelegt');
+  assert.equal(tr('en', 'log.discarded', { name: 'Ada', card: ['S11'] }), 'Ada discarded J♠');
+  assert.equal(tr('de', 'log.added', { name: 'Ada', cards: ['C13', 'X'] }), 'Ada hat K♣ Joker angelegt');
+});
+
+test('engine sends card codes, not English card names', () => {
+  const g = new Game();
+  g.addPlayer('a', 'Anna');
+  g.addPlayer('b', 'Ben');
+  g.start();
+  g.apply(g.cutter.id, { type: 'cut', at: 0.5 });
+  const p = g.current;
+  const card = p.hand.find(c => !c.joker);
+  assert.ok(g.apply(p.id, { type: 'discard', cardId: card.id }).ok);
+  const entry = g.log.at(-1);
+  assert.equal(entry.key, 'log.discarded');
+  assert.deepEqual(entry.params.card, [card.suit + card.rank]);
+});

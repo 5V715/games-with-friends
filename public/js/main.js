@@ -1,10 +1,10 @@
 // UI controller: screens, rendering, touch interaction and connection flows.
 
-import { SUIT_SYMBOL, RED_SUITS, SUITS, rankLabel, penalty } from './cards.js';
+import { SUIT_SYMBOL, RED_SUITS, SUITS, penalty } from './cards.js';
 import { analyzeMeld, layOff, swapJoker } from './rules.js';
 import { HostSession, GuestSession } from './session.js';
 import { PushToTalk, VoicePlayer, voiceSupported, VOICE_MAX_MS } from './voice.js';
-import { t, msg, applyI18n, setLang, savedLang, LANGS } from './i18n.js';
+import { t, msg, applyI18n, setLang, savedLang, LANGS, rankName } from './i18n.js';
 import {
   HostNet, GuestNet, getNetConfig, randomId, randomRoomCode, loadTurnSettings, saveTurnSettings,
   signalingUrl, savedSignalingUrl, saveSignalingUrl, defaultSignalingUrl,
@@ -119,12 +119,12 @@ function cardEl(card, slot) {
     if (slot) {
       const as = document.createElement('span');
       as.className = 'as';
-      as.textContent = rankLabel(slot.rank) + SUIT_SYMBOL[slot.suit];
+      as.textContent = rankName(slot.rank) + SUIT_SYMBOL[slot.suit];
       el.append(as);
     }
   } else {
     if (RED_SUITS.has(card.suit)) el.classList.add('red');
-    const r = rankLabel(card.rank);
+    const r = rankName(card.rank);
     const s = SUIT_SYMBOL[card.suit];
     el.innerHTML = `<span class="corner"><span>${r}</span><span class="s">${s}</span></span><span class="pip">${s}</span>`;
   }

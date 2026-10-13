@@ -13,6 +13,24 @@ const KEY = 'romme.lang';
 
 const plural = (n, one, many) => (n === 1 ? one : many);
 
+// Rank letters on the cards: Jack/Queen/King = J/Q/K in English,
+// Bube/Dame/König = B/D/K in German.
+const RANKS = {
+  en: { 1: 'A', 11: 'J', 12: 'Q', 13: 'K', 14: 'A' },
+  de: { 1: 'A', 11: 'B', 12: 'D', 13: 'K', 14: 'A' },
+};
+const SUIT_SYMBOLS = { S: '♠', H: '♥', D: '♦', C: '♣' };
+
+export function rankName(rank, language = lang) {
+  return (RANKS[language] || RANKS[DEFAULT])[rank] || String(rank);
+}
+
+// 'H11' -> 'J♥' / 'B♥', 'X' -> 'Joker'.
+export function cardName(code, language = lang) {
+  if (code === 'X') return 'Joker';
+  return rankName(Number(code.slice(1)), language) + (SUIT_SYMBOLS[code[0]] || '');
+}
+
 const STRINGS = {
   en: {
     // ---- engine errors
@@ -531,8 +549,11 @@ export function setLang(l) {
 export function tr(language, key, params = {}) {
   const s = STRINGS[language]?.[key] ?? STRINGS[DEFAULT][key];
   if (s == null) return key;
-  if (typeof s === 'function') return s(params);
-  return s.replace(/\{(\w+)\}/g, (_, k) => (params[k] ?? ''));
+  // Arrays of card codes are labelled in the target language.
+  const p = {};
+  for (const [k, v] of Object.entries(params)) p[k] = Array.isArray(v) ? v.map(c => cardName(c, language)).join(' ') : v;
+  if (typeof s === 'function') return s(p);
+  return s.replace(/\{(\w+)\}/g, (_, k) => (p[k] ?? ''));
 }
 
 export function t(key, params) {

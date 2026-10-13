@@ -11,7 +11,7 @@
 // scores penalty points for the cards still in their hand (doubled when the
 // winner went out in one go — "Hand‑Rommé").
 
-import { createDeck, shuffle, penalty, describe } from './cards.js';
+import { createDeck, shuffle, penalty } from './cards.js';
 import { analyzeMeld, layOff, swapJoker, MIN_INITIAL_MELD } from './rules.js';
 import { tr } from './i18n.js';
 
@@ -24,7 +24,9 @@ export class GameError extends Error {
   }
 }
 const fail = (key, params) => { throw new GameError(key, params); };
-const cardsText = (cards) => cards.map(describe).join(' ');
+// Cards in messages are sent as codes ('H11', 'X' = joker); every device
+// labels them in its own language (J/Q/K or B/D/K).
+const cardCodes = (cards) => cards.map(c => (c.joker ? 'X' : c.suit + c.rank));
 
 export const HAND_SIZE = 12;
 export const CUT_PEEK = 3;
@@ -202,7 +204,7 @@ export class Game {
       if (!card) fail('err.discardEmpty');
       p.hand.push(card);
       this.drawnFromDiscard = card.id;
-      this.say('log.tookDiscard', { name: p.name, card: describe(card) });
+      this.say('log.tookDiscard', { name: p.name, card: cardCodes([card]) });
     } else {
       if (!this.stock.length) this.#recycleDiscard();
       const card = this.stock.pop();
@@ -229,7 +231,7 @@ export class Game {
     const byId = new Map(cards.map(c => [c.id, c]));
     const melds = groups.map(g => {
       const m = analyzeMeld(g.map(id => byId.get(id)));
-      if (!m) fail('err.invalidMeld', { cards: cardsText(g.map(id => byId.get(id))) });
+      if (!m) fail('err.invalidMeld', { cards: cardCodes(g.map(id => byId.get(id))) });
       return m;
     });
     const points = melds.reduce((s, m) => s + m.points, 0);
@@ -260,11 +262,11 @@ export class Game {
     const meld = this.#findMeld(meldId);
     const cards = this.#takeFromHand(p, cardIds);
     const result = layOff(meld, cards);
-    if (!result) fail('err.noFit', { cards: cardsText(cards) });
+    if (!result) fail('err.noFit', { cards: cardCodes(cards) });
     meld.slots = result.slots;
     meld.points = result.points;
     this.#removeFromHand(p, cards);
-    this.say('log.added', { name: p.name, cards: cardsText(cards) });
+    this.say('log.added', { name: p.name, cards: cardCodes(cards) });
     this.#checkOut(p);
   }
 
@@ -275,12 +277,12 @@ export class Game {
     const [card] = this.#takeFromHand(p, [cardId]);
     const joker = meld.slots.find(s => s.card.id === jokerId)?.card;
     const result = swapJoker(meld, jokerId, card);
-    if (!result || !joker) fail('err.cannotSwap', { card: describe(card) });
+    if (!result || !joker) fail('err.cannotSwap', { card: cardCodes([card]) });
     meld.slots = result.slots;
     meld.points = result.points;
     this.#removeFromHand(p, [card]);
     p.hand.push(joker);
-    this.say('log.swapped', { name: p.name, card: describe(card) });
+    this.say('log.swapped', { name: p.name, card: cardCodes([card]) });
   }
 
   #discard(p, cardId) {
@@ -291,7 +293,7 @@ export class Game {
     }
     this.#removeFromHand(p, [card]);
     this.discard.push(card);
-    this.say('log.discarded', { name: p.name, card: describe(card) });
+    this.say('log.discarded', { name: p.name, card: cardCodes([card]) });
     if (this.#checkOut(p)) return;
     this.turn = (this.turn + 1) % this.players.length;
     this.turnNo++;
