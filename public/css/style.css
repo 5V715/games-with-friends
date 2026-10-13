@@ -456,8 +456,32 @@ body.is-host .guest-only { display: none !important; }
   box-shadow: 0 0 0 3px var(--gold), var(--shadow);
 }
 .hand .card.new { animation: arrive .5s ease-out; }
-.hand .card.dragging { opacity: .25; }
-.hand .card.drop-before { box-shadow: -4px 0 0 0 var(--gold), var(--shadow); }
+.hand .card.pressed { transform: translateY(-10px) scale(1.06); z-index: 2; }
+.hand .card.selected.pressed { transform: translateY(-22px) scale(1.06); }
+.hand .card.placeholder {
+  margin-left: 4px;
+  background: rgba(0, 0, 0, .28);
+  border: 2px dashed var(--gold);
+  box-shadow: none;
+  position: relative;
+}
+.hand .card.placeholder:first-child { margin-left: 0; }
+.hand .card.placeholder + .card { margin-left: 4px; }
+.hand .card.placeholder[data-count]::after {
+  content: attr(data-count);
+  position: absolute; inset: 0;
+  display: grid; place-items: center;
+  font: 800 1.1em/1 system-ui; color: var(--gold);
+}
+.hand.drag-over { filter: drop-shadow(0 0 6px rgba(242, 193, 78, .35)); }
+body.dragging-cards, body.dragging-cards * { cursor: grabbing !important; }
+.ghost-count {
+  position: absolute; top: -10px; right: -10px;
+  min-width: 26px; height: 26px; border-radius: 13px;
+  background: var(--gold); color: var(--accent-ink);
+  font: 800 14px/26px system-ui; text-align: center;
+  box-shadow: var(--shadow);
+}
 
 @keyframes arrive {
   from { transform: translateY(-60px) scale(.8); opacity: 0; }
@@ -468,10 +492,11 @@ body.is-host .guest-only { display: none !important; }
   position: fixed;
   left: 0; top: 0;
   pointer-events: none;
+  will-change: transform;
   z-index: 50;
-  transform-origin: center;
-  box-shadow: 0 12px 24px rgba(0, 0, 0, .45);
+  transform-origin: 20% 50%;
 }
+.drag-ghost .card { box-shadow: 0 14px 28px rgba(0, 0, 0, .5); }
 
 /* ---------- Action bar ---------- */
 

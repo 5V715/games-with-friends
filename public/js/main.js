@@ -495,7 +495,12 @@ function layoutHand() {
   const n = hand.children.length;
   const cw = first.offsetWidth;
   const width = hand.clientWidth;
-  const step = n > 1 ? Math.min(cw + 6, (width - cw) / (n - 1)) : cw;
+  // While dragging, the placeholder and the card after it are shown in full
+  // (not overlapped), so the gap is easy to see.
+  const ph = [...hand.children].findIndex(el => el.classList.contains('placeholder'));
+  const full = ph < 0 ? 0 : (ph > 0 ? 1 : 0) + (ph < n - 1 ? 1 : 0);
+  const rest = n - 1 - full;
+  const step = n > 1 ? Math.min(cw + 6, rest > 0 ? (width - cw - full * (cw + 4)) / rest : cw) : cw;
   hand.style.setProperty('--step', `${Math.max(step, 12)}px`);
 }
 
@@ -645,59 +650,114 @@ function stageOrMeld(ids) {
 }
 
 // ---------------------------------------------------------------- drag & drop
+//
+// Dragging a card (or all selected cards, if it is selected) lifts it out of
+// the hand; a gold placeholder shows where it will land and the other cards
+// slide aside to make room. Dropping on a meld, the discard pile or the
+// staging area plays the cards there instead.
 
-const drag = { active: false, start: null, id: null, el: null, ghost: null, target: null, pointerId: null };
+const HAND_ZONE_ABOVE = 80; // px above the hand that still counts as "hand"
+
+const drag = {
+  pointerId: null, start: null, id: null, el: null, active: false,
+  ids: [], els: [], ghost: null, placeholder: null, target: null, offset: null,
+};
 
 function dropTargetAt(x, y) {
   const el = document.elementFromPoint(x, y);
-  if (!el) return null;
-  const meld = el.closest('[data-meld]');
+  const meld = el?.closest('[data-meld]');
   if (meld) return { kind: 'meld', el: meld, meldId: Number(meld.dataset.meld) };
-  const drop = el.closest('[data-drop]');
+  const drop = el?.closest('[data-drop]');
   if (drop) return { kind: drop.dataset.drop, el: drop };
-  if (el.closest('.hand-wrap')) return { kind: 'hand', el: $('#hand') };
+  const wrap = $('.hand-wrap').getBoundingClientRect();
+  if (y >= wrap.top - HAND_ZONE_ABOVE && y <= wrap.bottom) return { kind: 'hand', el: $('#hand') };
   return null;
 }
 
 function setDropHover(target) {
-  for (const el of $$('.drop-hover, .drop-before')) el.classList.remove('drop-hover', 'drop-before');
-  if (!target) return;
-  if (target.kind === 'hand') {
-    const before = handInsertBefore(drag.lastX);
-    before?.classList.add('drop-before');
-  } else {
-    target.el.classList.add('drop-hover');
+  for (const el of $$('.drop-hover')) el.classList.remove('drop-hover');
+  if (target && target.kind !== 'hand') target.el.classList.add('drop-hover');
+  $('#hand').classList.toggle('drag-over', target?.kind === 'hand');
+}
+
+// The card the placeholder should sit in front of (null = at the end).
+// Cards overlap, so each card's "slot" is the visible part left of the next one.
+function slotBefore(x) {
+  const cards = $$('#hand .card:not(.placeholder)');
+  for (let i = 0; i < cards.length; i++) {
+    const r = cards[i].getBoundingClientRect();
+    const next = cards[i + 1]?.getBoundingClientRect();
+    const visible = next ? Math.max(8, next.left - r.left) : r.width;
+    if (x < r.left + visible / 2) return cards[i];
   }
+  return null;
 }
 
-// Cards overlap, so only the first `--step` pixels of each card are visible.
-function handInsertBefore(x) {
-  const step = parseFloat(getComputedStyle($('#hand')).getPropertyValue('--step')) || 0;
-  const cards = $$('#hand .card').filter(el => el !== drag.el);
-  return cards.find((el, i) => {
-    const r = el.getBoundingClientRect();
-    const visible = i === cards.length - 1 ? r.width : Math.min(r.width, step || r.width);
-    return x < r.left + visible / 2;
-  }) || null;
+// Moves the placeholder and animates the cards that shift (FLIP).
+function movePlaceholder(before) {
+  const hand = $('#hand');
+  const ph = drag.placeholder;
+  if ((before && ph.nextElementSibling === before) || (!before && hand.lastElementChild === ph)) return;
+  const cards = [...hand.children];
+  const from = new Map(cards.map(el => [el, el.getBoundingClientRect().left]));
+  hand.insertBefore(ph, before);
+  layoutHand();
+  for (const el of cards) {
+    const dx = from.get(el) - el.getBoundingClientRect().left;
+    if (dx && el.animate) el.animate([{ translate: `${dx}px 0` }, { translate: '0 0' }], { duration: 140, easing: 'ease-out' });
+  }
+  buzz(4);
 }
 
-// Invite link for this page; carries the signaling server if it isn't the default.
-function roomUrl(room) {
-  const q = new URLSearchParams({ room });
-  const sig = signalingUrl();
-  if (sig && sig !== defaultSignalingUrl()) q.set('signal', sig);
-  return `${location.origin}${location.pathname}?${q}`;
+function makeGhost(els) {
+  const ghost = document.createElement('div');
+  ghost.className = 'drag-ghost';
+  const r = els[0].getBoundingClientRect();
+  els.forEach((el, i) => {
+    const c = el.cloneNode(true);
+    c.classList.remove('selected', 'new', 'pressed');
+    c.style.cssText = `position:absolute;left:${i * 18}px;top:${i * 2}px;margin:0;width:${r.width}px;height:${r.height}px;`;
+    ghost.append(c);
+  });
+  ghost.style.width = `${r.width + (els.length - 1) * 18}px`;
+  ghost.style.height = `${r.height}px`;
+  if (els.length > 1) {
+    const badge = document.createElement('span');
+    badge.className = 'ghost-count';
+    badge.textContent = els.length;
+    ghost.append(badge);
+  }
+  document.body.append(ghost);
+  return ghost;
+}
+
+function startDrag() {
+  const hand = $('#hand');
+  const order = sortedHand().map(c => c.id);
+  drag.ids = ui.selected.has(drag.id) ? order.filter(id => ui.selected.has(id)) : [drag.id];
+  drag.els = drag.ids.map(id => hand.querySelector(`.card[data-id="${CSS.escape(id)}"]`)).filter(Boolean);
+  const rect = drag.el.getBoundingClientRect();
+  drag.offset = { x: drag.start.x - rect.left, y: drag.start.y - rect.top };
+  drag.ghost = makeGhost(drag.el === drag.els[0] ? drag.els : [drag.el, ...drag.els.filter(e => e !== drag.el)]);
+
+  const ph = document.createElement('div');
+  ph.className = 'card placeholder';
+  if (drag.ids.length > 1) ph.dataset.count = drag.ids.length;
+  drag.placeholder = ph;
+  hand.insertBefore(ph, drag.els[0]);
+  for (const el of drag.els) el.remove();
+  layoutHand();
+  document.body.classList.add('dragging-cards');
+  buzz(10);
 }
 
 function onPointerDown(ev) {
   const card = ev.target.closest('#hand .card');
   if (!card || drag.pointerId != null) return;
-  drag.pointerId = ev.pointerId;
-  drag.start = { x: ev.clientX, y: ev.clientY };
-  drag.id = card.dataset.id;
-  drag.el = card;
-  drag.active = false;
-  card.setPointerCapture(ev.pointerId);
+  Object.assign(drag, { pointerId: ev.pointerId, start: { x: ev.clientX, y: ev.clientY }, id: card.dataset.id, el: card, active: false });
+  card.classList.add('pressed');
+  // Capture on the hand: the card element itself leaves the DOM while dragging.
+  $('#hand').setPointerCapture(ev.pointerId);
 }
 
 function onPointerMove(ev) {
@@ -705,51 +765,52 @@ function onPointerMove(ev) {
   const dx = ev.clientX - drag.start.x;
   const dy = ev.clientY - drag.start.y;
   if (!drag.active) {
-    if (Math.hypot(dx, dy) < 10) return;
+    if (Math.hypot(dx, dy) < 8) return;
     drag.active = true;
-    const rect = drag.el.getBoundingClientRect();
-    drag.offset = { x: drag.start.x - rect.left, y: drag.start.y - rect.top };
-    const ghost = drag.el.cloneNode(true);
-    ghost.classList.remove('selected', 'new');
-    ghost.classList.add('drag-ghost');
-    ghost.style.width = `${rect.width}px`;
-    ghost.style.height = `${rect.height}px`;
-    ghost.style.margin = '0';
-    document.body.append(ghost);
-    drag.ghost = ghost;
-    drag.el.classList.add('dragging');
+    drag.el.classList.remove('pressed');
+    startDrag();
   }
-  drag.lastX = ev.clientX;
+  const tilt = Math.max(-10, Math.min(10, dx / 14));
   drag.ghost.style.transform =
-    `translate(${ev.clientX - drag.offset.x}px, ${ev.clientY - drag.offset.y}px) rotate(${Math.max(-12, Math.min(12, dx / 12))}deg) scale(1.08)`;
+    `translate(${ev.clientX - drag.offset.x}px, ${ev.clientY - drag.offset.y - 24}px) rotate(${tilt}deg) scale(1.15)`;
   drag.target = dropTargetAt(ev.clientX, ev.clientY);
   setDropHover(drag.target);
+  if (drag.target?.kind === 'hand') movePlaceholder(slotBefore(ev.clientX));
 }
 
 function onPointerUp(ev) {
   if (ev.pointerId !== drag.pointerId) return;
-  const { id, active, target } = drag;
-  const before = active && target?.kind === 'hand' ? handInsertBefore(ev.clientX) : null;
+  const { id, active, target, ids, placeholder } = drag;
+  drag.el?.classList.remove('pressed');
+  let insertAt = -1;
+  if (active && target?.kind === 'hand' && placeholder) {
+    // Index among the remaining cards where the dragged ones go.
+    insertAt = $$('#hand .card').indexOf(placeholder);
+  }
   drag.ghost?.remove();
-  drag.el?.classList.remove('dragging');
   setDropHover(null);
-  Object.assign(drag, { active: false, start: null, id: null, el: null, ghost: null, target: null, pointerId: null });
+  document.body.classList.remove('dragging-cards');
+  Object.assign(drag, { pointerId: null, start: null, id: null, el: null, active: false, ids: [], els: [], ghost: null, placeholder: null, target: null });
 
   if (!active) {
     if (ev.type === 'pointerup') onCardTap(id);
   } else {
-    const ids = ui.selected.has(id) ? [...ui.selected] : [id];
     switch (target?.kind) {
       case 'hand': {
-        ui.handOrder = ui.handOrder.filter(x => x !== id);
-        const idx = before ? ui.handOrder.indexOf(before.dataset.id) : ui.handOrder.length;
-        ui.handOrder.splice(idx, 0, id);
+        const hidden = stagedIds();
+        const moving = new Set(ids);
+        const visible = ui.handOrder.filter(x => !hidden.has(x) && !moving.has(x));
+        const anchor = visible[insertAt];
+        const rest = ui.handOrder.filter(x => !moving.has(x));
+        const idx = anchor ? rest.indexOf(anchor) : rest.length;
+        rest.splice(idx, 0, ...ids);
+        ui.handOrder = rest;
         buzz(6);
         break;
       }
       case 'discard': discardCard(id); break;
       case 'meld': playOnMeld(target.meldId, ids); break;
-      case 'stage': if (ids.length >= 3) stageOrMeld(ids); break;
+      case 'stage': if (ids.length >= 3) stageOrMeld(ids); else toast('A group needs at least 3 cards'); break;
       case 'stock': drawFrom('stock'); break;
       default: break;
     }
@@ -762,6 +823,14 @@ function onPointerUp(ev) {
     renderHand();
     renderActions();
   }
+}
+
+// Invite link for this page; carries the signaling server if it isn't the default.
+function roomUrl(room) {
+  const q = new URLSearchParams({ room });
+  const sig = signalingUrl();
+  if (sig && sig !== defaultSignalingUrl()) q.set('signal', sig);
+  return `${location.origin}${location.pathname}?${q}`;
 }
 
 // ---------------------------------------------------------------- connection flows
