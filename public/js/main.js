@@ -353,7 +353,7 @@ function renderPiles() {
     cnt.textContent = v.discardCount;
     discard.append(cnt);
   }
-  discard.classList.toggle('active', (drawing && !!v.discardTop) || (canPlay() && ui.selected.size === 1));
+  discard.classList.toggle('active', (drawing && !!v.discardTop && !!me()?.cameOut) || (canPlay() && ui.selected.size === 1));
 
   const status = $('#status');
   const cur = v.players.find(p => p.id === v.turn);

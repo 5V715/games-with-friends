@@ -256,7 +256,7 @@ body.is-host .guest-only { display: none !important; }
   align-content: flex-start;
 }
 .melds:empty::before {
-  content: 'No melds yet — first meld needs 30 points';
+  content: 'No melds yet — first meld needs 40 points';
   color: var(--ink-dim);
   font-size: 14px;
   margin: auto;

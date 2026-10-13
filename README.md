@@ -15,7 +15,7 @@ between browsers, so game traffic never goes through a server.
 - Touch-first UI: tap to select, drag to reorder your hand, drag onto melds or the
   discard pile. Large touch targets, haptics, safe-area aware, installable (PWA manifest).
 - Full Rommé rules: 110 cards (2 decks + 6 jokers), sets and runs, ace low/high,
-  30-point first meld, laying off, joker swapping, Hand-Rommé (double penalty),
+  40-point first meld, laying off, joker swapping, Hand-Rommé (double penalty),
   multi-round scoring.
 - Host-authoritative networking: the host's browser runs the game and sends each
   player only their own hand.
@@ -119,16 +119,17 @@ on the server (`TURN_URL` …) or per device in **Connection settings**.
 
 ## Rules (short)
 
-Everyone gets 13 cards. On your turn: **draw** (from the stock or the discard pile),
+Everyone gets 13 cards. On your turn: **draw** (from the stock, or from the discard pile once you are out),
 optionally **meld**, then **discard**.
 
 - **Set:** 3–4 cards of the same rank in different suits.
 - **Run:** 3 or more consecutive cards of the same suit. An ace can be low (A-2-3)
   or high (Q-K-A), but a run can't wrap around (K-A-2).
 - A **joker** can stand in for any card.
-- Your **first meld** must total at least 30 points: 2–10 count face value, J/Q/K
-  count 10, an ace counts 11 (or 1 in A-2-3). After that, you can lay cards off on
-  any meld and swap a joker for the real card it represents.
+- Your **first meld** must total at least 40 points: 2–10 count face value, J/Q/K
+  count 10, an ace counts 11 (or 1 in A-2-3). After that, and only on your own turn, you
+  can take from the discard pile, lay cards off on any meld, and swap a joker for the
+  real card it represents if you hold it.
 - You can't throw back the card you just picked up from the discard pile.
 - The first player with no cards left wins the round. Everyone else scores the
   cards still in their hand as penalty points: joker 20, ace 11, face cards 10,

@@ -1,9 +1,9 @@
 // Authoritative Rommé game state. Runs on the host (or in practice mode);
 // guests only ever see the per-player views produced by view().
 //
-// Turn flow: draw (stock or discard pile) → optionally meld / lay off / swap
-// jokers → discard one card. A player's first meld must be worth at least
-// 30 points. The round ends when a player has no cards left; everyone else
+// Turn flow: draw (stock, or the discard pile once you are out) → optionally
+// meld / lay off / swap jokers → discard one card. A player's first meld must
+// be worth at least 40 points; laying off and joker swaps need you to be out. The round ends when a player has no cards left; everyone else
 // scores penalty points for the cards still in their hand (doubled when the
 // winner went out in one go — "Hand‑Rommé").
 
@@ -137,6 +137,7 @@ export class Game {
   #draw(p, from) {
     if (this.phase !== 'draw') throw new Error('You already drew a card');
     if (from === 'discard') {
+      if (!p.cameOut) throw new Error(`You may take from the discard pile once you are out (${MIN_INITIAL_MELD}+ points)`);
       const card = this.discard.pop();
       if (!card) throw new Error('Discard pile is empty');
       p.hand.push(card);

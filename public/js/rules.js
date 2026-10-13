@@ -10,7 +10,7 @@
 
 import { SUITS, positionValue, setValue } from './cards.js';
 
-export const MIN_INITIAL_MELD = 30;
+export const MIN_INITIAL_MELD = 40;
 
 export function analyzeSet(cards) {
   if (cards.length < 3 || cards.length > 4) return null;
