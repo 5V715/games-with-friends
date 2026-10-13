@@ -4,6 +4,7 @@ import { SUIT_SYMBOL, RED_SUITS, SUITS, rankLabel, penalty } from './cards.js';
 import { analyzeMeld, layOff, swapJoker } from './rules.js';
 import { HostSession, GuestSession } from './session.js';
 import { PushToTalk, VoicePlayer, voiceSupported, VOICE_MAX_MS } from './voice.js';
+import { t, msg, applyI18n, setLang, savedLang, LANGS } from './i18n.js';
 import {
   HostNet, GuestNet, getNetConfig, randomId, randomRoomCode, loadTurnSettings, saveTurnSettings,
   signalingUrl, savedSignalingUrl, saveSignalingUrl, defaultSignalingUrl,
@@ -93,7 +94,7 @@ async function copyText(text) {
     document.execCommand('copy');
     ta.remove();
   }
-  toast('Copied');
+  toast(t('toast.copied'));
 }
 
 function openDialog(id) {
@@ -177,7 +178,7 @@ function attach(session) {
   });
   session.addEventListener('error', (ev) => {
     if (session !== ui.session) return;
-    toast(ev.detail.message, { error: true });
+    toast(ev.detail.key ? t(ev.detail.key, ev.detail.params) : ev.detail.message, { error: true });
     if (ev.detail.fatal) leave();
   });
   session.addEventListener('link', (ev) => {
@@ -261,7 +262,7 @@ function renderCut() {
   if (v.phase === 'cut') {
     const mine = v.cutter === v.you;
     const cutter = v.players.find(p => p.id === v.cutter);
-    $('#cut-title').textContent = mine ? 'Cut the deck' : `${cutter?.name || '…'} is cutting the deck`;
+    $('#cut-title').textContent = mine ? t('cut.title') : t('cut.other', { name: cutter?.name || '…' });
     $('#cut-hint').hidden = !mine;
     const deck = $('#cut-deck');
     deck.classList.toggle('mine', mine);
@@ -291,10 +292,8 @@ function renderCut() {
       peek.append(el);
     }
     const n = kept.size;
-    $('#cut-result-title').textContent = n ? (n === 1 ? 'You keep a joker! 🎉' : `You keep ${n} jokers! 🎉`) : 'No joker this time';
-    $('#cut-result-text').textContent = n
-      ? 'The joker is in your hand and counts towards your 12 cards. The other cards go back into the deck.'
-      : 'These cards go back into the deck.';
+    $('#cut-result-title').textContent = n ? t('cut.kept', { n }) : t('cut.none');
+    $('#cut-result-text').textContent = n ? t('cut.keptText') : t('cut.noneText');
     if (n) buzz([30, 50, 30]);
     openDialog('dlg-cut');
   }
@@ -327,16 +326,16 @@ function onCutUp(ev) {
 
 function connChip(p) {
   const c = p.conn || {};
-  if (c.state === 'host') return '<span class="chip ok">host</span>';
-  if (c.state === 'bot') return '<span class="chip">bot</span>';
+  if (c.state === 'host') return `<span class="chip ok">${t('conn.host')}</span>`;
+  if (c.state === 'bot') return `<span class="chip">${t('conn.bot')}</span>`;
   if (c.state === 'open') {
-    const kind = c.route ? (c.route.relay ? 'relay (TURN)' : 'direct P2P') : 'connected';
+    const kind = c.route ? (c.route.relay ? t('conn.relay') : t('conn.direct')) : t('conn.connected');
     const rtt = c.route?.rtt != null ? ` · ${c.route.rtt} ms` : '';
     return `<span class="chip ${c.route?.relay ? 'warn' : 'ok'}">${kind}${rtt}</span>`;
   }
-  if (c.state === 'connecting' || c.state === 'new') return '<span class="chip warn">ICE checking…</span>';
-  if (c.state === 'unstable') return '<span class="chip warn">unstable</span>';
-  return '<span class="chip bad">offline</span>';
+  if (c.state === 'connecting' || c.state === 'new') return `<span class="chip warn">${t('conn.checking')}</span>`;
+  if (c.state === 'unstable') return `<span class="chip warn">${t('conn.unstable')}</span>`;
+  return `<span class="chip bad">${t('conn.offline')}</span>`;
 }
 
 function dotClass(p) {
@@ -355,12 +354,12 @@ function renderLobby() {
   list.innerHTML = '';
   for (const p of v.players) {
     const li = document.createElement('li');
-    li.innerHTML = `<span class="pname">${esc(p.name)}${p.id === v.you ? ' (you)' : ''}${p.id === ui.speaking ? ' 🔊' : ''}</span>${connChip(p)}`;
+    li.innerHTML = `<span class="pname">${esc(p.name)}${p.id === v.you ? t('lobby.you') : ''}${p.id === ui.speaking ? ' 🔊' : ''}</span>${connChip(p)}`;
     if (p.id === ui.speaking) li.classList.add('speaking');
     if (ui.session.isHost && p.id !== v.you) {
       const b = document.createElement('button');
       b.className = 'btn small';
-      b.textContent = 'Remove';
+      b.textContent = t('lobby.remove');
       b.onclick = () => ui.session.act({ type: 'removePlayer', playerId: p.id });
       li.append(b);
     }
@@ -374,7 +373,7 @@ function renderLobby() {
 
 function renderLink() {
   const dot = $('#lobby-link');
-  if (ui.session?.isHost) { dot.className = 'link-dot ok'; dot.title = 'You are the host'; return; }
+  if (ui.session?.isHost) { dot.className = 'link-dot ok'; dot.title = t('lobby.youHost'); return; }
   const s = ui.link?.state;
   dot.className = 'link-dot ' + (s === 'open' ? 'ok' : s === 'offline' || s === 'failed' || s === 'closed' ? 'bad' : 'warn');
   dot.title = s || 'connecting';
@@ -389,12 +388,12 @@ function renderOpponents() {
     const el = document.createElement('div');
     el.className = 'opp' + (p.id === v.turn ? ' turn' : '') + (p.id === v.you ? ' me' : '');
     if (p.id === ui.speaking) el.classList.add('speaking');
-    const name = p.id === v.you ? 'You' : p.name;
+    const name = p.id === v.you ? t('game.you') : p.name;
     el.innerHTML = `
       <span class="mini-back">${p.count}</span>
       <span class="meta">
         <span class="oname">${esc(name)}</span>
-        <span class="osub">${p.score} pts${p.cameOut ? ' · out ✓' : ''}</span>
+        <span class="osub">${t('game.pts', { n: p.score })}${p.cameOut ? ' · ' + t('game.out') : ''}</span>
       </span>
       <span class="link-dot ${p.id === v.you && !ui.session.isHost ? linkDotClass() : dotClass(p)}"></span>`;
     box.append(el);
@@ -410,6 +409,7 @@ function linkDotClass() {
 function renderTable() {
   const box = $('#melds');
   box.innerHTML = '';
+  box.dataset.empty = t('game.noMelds', { min: ui.view.minInitial });
   const sel = selectedCards();
   const canTarget = canPlay() && me()?.cameOut && sel.length > 0;
   for (const m of ui.view.melds) {
@@ -450,12 +450,12 @@ function renderPiles() {
   const status = $('#status');
   const cur = v.players.find(p => p.id === v.turn);
   let main;
-  if (v.phase === 'cut') main = v.cutter === v.you ? 'Cut the deck' : 'Cutting the deck…';
-  else if (v.phase === 'roundOver') main = 'Round over';
-  else if (myTurn()) main = v.phase === 'draw' ? 'Your turn — draw a card' : 'Meld, then discard';
-  else main = `${cur?.name || '…'} is playing`;
+  if (v.phase === 'cut') main = v.cutter === v.you ? t('game.statusCut') : t('game.statusCutting');
+  else if (v.phase === 'roundOver') main = t('game.statusRoundOver');
+  else if (myTurn()) main = v.phase === 'draw' ? t('game.statusDraw') : t('game.statusPlay');
+  else main = t('game.statusOther', { name: cur?.name || '…' });
   status.className = 'status' + (myTurn() ? ' your-turn' : '');
-  status.innerHTML = `<div class="main">${esc(main)}</div><div class="sub">${esc(v.log[v.log.length - 1] || '')}</div>`;
+  status.innerHTML = `<div class="main">${esc(main)}</div><div class="sub">${esc(msg(v.log[v.log.length - 1]))}</div>`;
 }
 
 function renderStaging() {
@@ -473,7 +473,7 @@ function renderStaging() {
   }
   const need = ui.view.minInitial;
   const pts = $('#staged-points');
-  pts.textContent = me()?.cameOut ? `${total} pts` : `${total} / ${need} pts`;
+  pts.textContent = me()?.cameOut ? t('game.stagedOut', { total }) : t('game.staged', { total, min: need });
   pts.classList.toggle('ok', total >= need || !!me()?.cameOut);
   const ready = canPlay() && (total >= need || me()?.cameOut);
   $('#btn-laydown').disabled = !ready;
@@ -519,10 +519,10 @@ function renderActions() {
   const sel = selectedCards();
   const play = canPlay();
   $('#btn-meld').disabled = !play || sel.length < 3;
-  $('#btn-meld').textContent = me()?.cameOut ? 'Meld' : 'Group';
+  $('#btn-meld').textContent = me()?.cameOut ? t('game.meld') : t('game.group');
   $('#btn-discard').disabled = !play || sel.length !== 1;
   // The button shows the sort it will apply next.
-  $('#btn-sort').textContent = ui.sortMode === 'suit' ? 'Sort 7‑7' : 'Sort ♠♥';
+  $('#btn-sort').textContent = ui.sortMode === 'suit' ? t('game.sortRank') : t('game.sortSuit');
 }
 
 function updateSelection() {
@@ -536,12 +536,12 @@ function renderScoresTable(table, { withHands }) {
   const v = ui.view;
   const r = v.result;
   const rows = [...v.players].sort((a, b) => a.score - b.score);
-  table.innerHTML = `<tr><th>Player</th>${r && withHands ? '<th class="num">Round</th>' : ''}<th class="num">Total</th></tr>`;
+  table.innerHTML = `<tr><th>${t('scores.player')}</th>${r && withHands ? `<th class="num">${t('scores.round')}</th>` : ''}<th class="num">${t('scores.total')}</th></tr>`;
   for (const p of rows) {
     const tr = document.createElement('tr');
     if (r && withHands && p.id === r.winner) tr.className = 'winner';
     const name = document.createElement('td');
-    name.textContent = (p.id === v.you ? 'You' : p.name) + (r && withHands && p.id === r.winner ? ' 🏆' : '');
+    name.textContent = (p.id === v.you ? t('game.you') : p.name) + (r && withHands && p.id === r.winner ? ' 🏆' : '');
     if (r && withHands && r.hands[p.id]?.length) {
       const left = document.createElement('div');
       left.className = 'left-cards';
@@ -572,8 +572,8 @@ function renderRoundOver() {
   if (ui.shownResultRound === v.round) return;
   ui.shownResultRound = v.round;
   const winner = v.players.find(p => p.id === v.result.winner);
-  const who = winner.id === v.you ? 'You win' : `${winner.name} wins`;
-  $('#round-title').textContent = `${who} round ${v.round}${v.result.handRomme ? ' — Hand‑Rommé! ×2' : '!'}`;
+  const who = winner.id === v.you ? t('round.youWin', { round: v.round }) : t('round.otherWins', { name: winner.name, round: v.round });
+  $('#round-title').textContent = who + (v.result.handRomme ? t('round.handRomme') : '!');
   renderScoresTable($('#round-scores'), { withHands: true });
   if (winner.id === v.you) buzz([40, 60, 40]);
   setTimeout(() => openDialog('dlg-round'), 500);
@@ -610,16 +610,16 @@ function onCardTap(id) {
 }
 
 function drawFrom(from) {
-  if (!myTurn()) return toast('Wait for your turn');
+  if (!myTurn()) return toast(t('toast.waitTurn'));
   if (ui.view.phase !== 'draw') return false;
   act({ type: 'draw', from });
   return true;
 }
 
 function discardCard(id) {
-  if (!canPlay()) return toast(myTurn() ? 'Draw a card first' : 'Wait for your turn');
+  if (!canPlay()) return toast(myTurn() ? t('err.drawFirst') : t('toast.waitTurn'));
   if (ui.staged.length) {
-    toast('Lay down or undo your staged groups first', { error: true });
+    toast(t('toast.stagedFirst'), { error: true });
     return;
   }
   ui.selected.delete(id);
@@ -627,12 +627,12 @@ function discardCard(id) {
 }
 
 function playOnMeld(meldId, ids) {
-  if (!canPlay()) return toast(myTurn() ? 'Draw a card first' : 'Wait for your turn');
+  if (!canPlay()) return toast(myTurn() ? t('err.drawFirst') : t('toast.waitTurn'));
   const meld = ui.view.melds.find(m => m.id === meldId);
   const byId = handById();
   const cards = ids.map(id => byId.get(id)).filter(Boolean);
   if (!meld || !cards.length) return;
-  if (!me().cameOut) return toast(`Lay down ${ui.view.minInitial} points first`, { error: true });
+  if (!me().cameOut) return toast(t('toast.layDownFirst', { min: ui.view.minInitial }), { error: true });
   if (cards.length === 1 && !cards[0].joker) {
     const jokerId = jokerSwapFor(meld, cards[0]);
     if (jokerId && !layOff(meld, cards)) {
@@ -644,11 +644,11 @@ function playOnMeld(meldId, ids) {
 }
 
 function stageOrMeld(ids) {
-  if (!canPlay()) return toast(myTurn() ? 'Draw a card first' : 'Wait for your turn');
+  if (!canPlay()) return toast(myTurn() ? t('err.drawFirst') : t('toast.waitTurn'));
   const byId = handById();
   const cards = ids.map(id => byId.get(id)).filter(Boolean);
   const m = analyzeMeld(cards);
-  if (!m) return toast('That is not a valid set or run', { error: true });
+  if (!m) return toast(t('toast.invalidMeld'), { error: true });
   if (me().cameOut) {
     act({ type: 'meld', groups: [ids] });
     return;
@@ -658,7 +658,7 @@ function stageOrMeld(ids) {
   buzz();
   render();
   const total = ui.staged.reduce((s, g) => s + analyzeMeld(g.map(id => byId.get(id))).points, 0);
-  if (total < ui.view.minInitial) toast(`${total} of ${ui.view.minInitial} points — add more groups`);
+  if (total < ui.view.minInitial) toast(t('toast.morePoints', { total, min: ui.view.minInitial }));
 }
 
 // ---------------------------------------------------------------- drag & drop
@@ -822,7 +822,7 @@ function onPointerUp(ev) {
       }
       case 'discard': discardCard(id); break;
       case 'meld': playOnMeld(target.meldId, ids); break;
-      case 'stage': if (ids.length >= 3) stageOrMeld(ids); else toast('A group needs at least 3 cards'); break;
+      case 'stage': if (ids.length >= 3) stageOrMeld(ids); else toast(t('toast.groupMin')); break;
       case 'stock': drawFrom('stock'); break;
       default: break;
     }
@@ -853,7 +853,7 @@ let pttTimer = null;
 
 function speakerName(id) {
   const p = ui.view?.players.find(x => x.id === id);
-  return p ? p.name : 'Someone';
+  return p ? p.name : t('ptt.someone');
 }
 
 function setSpeaking(id) {
@@ -865,11 +865,11 @@ function setSpeaking(id) {
 
 voicePlayer.addEventListener('start', (ev) => {
   setSpeaking(ev.detail.from);
-  toast(`🔊 ${speakerName(ev.detail.from)}`, { ms: 1500 });
+  toast(t('ptt.speaking', { name: speakerName(ev.detail.from) }), { ms: 1500 });
 });
 voicePlayer.addEventListener('end', (ev) => {
   setSpeaking(null);
-  if (!ev.detail.ok) toast(`Could not play the message from ${speakerName(ev.detail.from)}`, { error: true });
+  if (!ev.detail.ok) toast(t('ptt.playFailed', { name: speakerName(ev.detail.from) }), { error: true });
 });
 
 ptt.addEventListener('state', (ev) => {
@@ -882,7 +882,7 @@ ptt.addEventListener('state', (ev) => {
     const t0 = Date.now();
     const tick = () => {
       const s = Math.floor((Date.now() - t0) / 1000);
-      $('#ptt-time').textContent = `${s}s / ${VOICE_MAX_MS / 1000}s`;
+      $('#ptt-time').textContent = `${s}s / ${VOICE_MAX_MS / 1000}s · ${t('ptt.release')}`;
     };
     tick();
     pttTimer = setInterval(tick, 250);
@@ -891,13 +891,13 @@ ptt.addEventListener('state', (ev) => {
 
 ptt.addEventListener('clip', async (ev) => {
   const s = ui.session;
-  if (!s?.canTalk) return toast('Nobody connected to hear you', { error: true });
+  if (!s?.canTalk) return toast(t('ptt.nobody'), { error: true });
   try {
     await s.sendVoice(ev.detail.blob);
     buzz(8);
-    toast(`Sent (${(ev.detail.ms / 1000).toFixed(1)} s)`, { ms: 1200 });
+    toast(t('ptt.sent', { s: (ev.detail.ms / 1000).toFixed(1) }), { ms: 1200 });
   } catch {
-    toast('Could not send the message', { error: true });
+    toast(t('ptt.sendFailed'), { error: true });
   }
 });
 
@@ -906,11 +906,11 @@ function bindPushToTalk(btn) {
   btn.addEventListener('pointerdown', (e) => {
     e.preventDefault();
     voicePlayer.unlock();
-    if (!ui.session?.canTalk) return toast('Nobody connected yet', { error: true });
+    if (!ui.session?.canTalk) return toast(t('ptt.nobodyYet'), { error: true });
     btn.setPointerCapture(e.pointerId);
     ptt.start().catch((err) => {
       const denied = err?.name === 'NotAllowedError' || err?.name === 'SecurityError';
-      toast(denied ? 'Microphone access was denied' : 'No microphone available', { error: true });
+      toast(denied ? t('ptt.denied') : t('ptt.noMic'), { error: true });
     });
   });
   const release = () => { ptt.stop(); };
@@ -945,7 +945,7 @@ async function hostOnline() {
       }
     } else {
       room = null;
-      toast('No signaling server — invite players with codes');
+      toast(t('toast.noSignalHost'));
     }
     ui.room = room;
     const s = new HostSession({ name: playerName(), clientId, net, room });
@@ -955,31 +955,29 @@ async function hostOnline() {
       s.room = null;
       ui.room = null;
       history.replaceState(null, '', location.pathname + location.search.replace(/([?&])room=[^&]*&?/, '$1').replace(/[?&]$/, ''));
-      toast(ev.detail.code === 'room-expired'
-        ? 'Table code expired after inactivity. Players at the table stay connected; invite new players with a code.'
-        : 'Signaling server closed the table code. Players at the table stay connected.', { error: true, ms: 6000 });
+      toast(ev.detail.code === 'room-expired' ? t('toast.codeExpired') : t('toast.codeClosed'), { error: true, ms: 6000 });
       s.broadcast();
     });
     s.broadcast();
     if (room) history.replaceState(null, '', roomUrl(room));
   } catch (e) {
-    toast(`Could not create table: ${e.message}`, { error: true });
+    toast(t('toast.createFailed', { error: e.message }), { error: true });
   } finally {
     btn.disabled = false;
   }
 }
 
 const JOIN_ERRORS = {
-  'no-host': 'No table with that code (is the host still on the lobby page?)',
-  'room-full': 'That table is full',
-  'signaling-unavailable': 'Signaling server unreachable',
+  'no-host': 'toast.noHost',
+  'room-full': 'toast.roomFull',
+  'signaling-unavailable': 'toast.sigUnreachable',
 };
 
 async function joinOnline(room, { quiet = false } = {}) {
   room = String(room || '').trim().toUpperCase();
-  if (!/^[A-Z0-9]{4,8}$/.test(room)) return toast('Enter the table code', { error: true });
+  if (!/^[A-Z0-9]{4,8}$/.test(room)) return toast(t('toast.enterCode'), { error: true });
   const config = await getNetConfig();
-  if (!config.signaling) return toast('No signaling server configured or reachable — use an invite code', { error: true });
+  if (!config.signaling) return toast(t('toast.noSignalJoin'), { error: true });
   ui.mode = 'online';
   ui.room = room;
   const net = new GuestNet({ config });
@@ -993,7 +991,7 @@ async function joinOnline(room, { quiet = false } = {}) {
     store('session', 'romme.activeRoom', room);
   } catch (e) {
     if (quiet) throw e;
-    toast(JOIN_ERRORS[e.message] || `Could not join: ${e.message}`, { error: true });
+    toast(JOIN_ERRORS[e.message] ? t(JOIN_ERRORS[e.message]) : t('toast.joinFailed', { error: e.message }), { error: true });
     leave();
   }
 }
@@ -1002,14 +1000,14 @@ function renderLobbyConnecting(room) {
   $('#room-code').textContent = room || '—';
   $('#btn-share').hidden = !room;
   $('#room-box').hidden = false;
-  $('#lobby-players').innerHTML = '<li><span class="pname">Connecting to host…</span><span class="chip warn">ICE checking…</span></li>';
+  $('#lobby-players').innerHTML = `<li><span class="pname">${t('lobby.connecting')}</span><span class="chip warn">${t('conn.checking')}</span></li>`;
   renderLink();
 }
 
 async function onGuestLost() {
   if (ui.mode === 'online' && ui.room && ui.reconnects < 5) {
     ui.reconnects++;
-    toast('Connection lost — reconnecting…', { error: true });
+    toast(t('toast.reconnecting'), { error: true });
     await new Promise(r => setTimeout(r, 1500 * ui.reconnects));
     if (!ui.session || ui.session.isHost) return;
     const room = ui.room;
@@ -1020,7 +1018,7 @@ async function onGuestLost() {
     }
     return;
   }
-  toast('Disconnected from the host', { error: true });
+  toast(t('toast.disconnected'), { error: true });
   leave();
 }
 
@@ -1050,18 +1048,18 @@ async function openManualInvite() {
     ui.invite = await s.net.createManualInvite();
     $('#invite-code').value = ui.invite.code;
   } catch (e) {
-    toast(`Could not create invite: ${e.message}`, { error: true });
+    toast(t('toast.inviteFailed', { error: e.message }), { error: true });
   }
 }
 
 async function connectManualInvite() {
   const answer = $('#invite-answer').value.trim();
-  if (!ui.invite || !answer) return toast('Paste the reply code first', { error: true });
+  if (!ui.invite || !answer) return toast(t('toast.pasteReply'), { error: true });
   try {
     await ui.invite.accept(answer);
     ui.invite = null;
     closeDialog('dlg-invite');
-    toast('Connecting… (ICE checks running)');
+    toast(t('toast.connecting'));
   } catch (e) {
     toast(e.message, { error: true });
   }
@@ -1070,7 +1068,7 @@ async function connectManualInvite() {
 // Guest: manual join.
 async function makeManualAnswer() {
   const code = $('#join-offer').value.trim();
-  if (!code) return toast('Paste the invite code first', { error: true });
+  if (!code) return toast(t('toast.pasteInvite'), { error: true });
   const btn = $('#btn-make-answer');
   btn.disabled = true;
   try {
@@ -1085,7 +1083,7 @@ async function makeManualAnswer() {
     $('#join-answer-box').hidden = false;
     s.addEventListener('state', () => closeDialog('dlg-manual-join'), { once: true });
   } catch (e) {
-    toast(e.message || 'Invalid invite code', { error: true });
+    toast(e.message || t('toast.invalidInvite'), { error: true });
   } finally {
     btn.disabled = false;
   }
@@ -1097,20 +1095,21 @@ function openMenu() {
   if (!ui.view) return;
   renderScoresTable($('#menu-scores'), { withHands: false });
   const info = $('#menu-conn');
-  if (ui.mode === 'practice') info.textContent = 'Practice game (offline).';
+  if (ui.mode === 'practice') info.textContent = t('menu.practice');
   else if (ui.session?.isHost) {
     const peers = ui.view.players.filter(p => !p.bot && p.id !== ui.view.you);
-    info.innerHTML = `You are hosting${ui.room ? ` table <b>${esc(ui.room)}</b>` : ''}. ` +
+    info.innerHTML = (ui.room ? t('menu.hostingRoom', { room: esc(ui.room) }) : t('menu.hosting')) + ' ' +
       peers.map(p => `${esc(p.name)}: ${connChip(p)}`).join(' ');
   } else {
     const r = ui.link?.route;
-    info.textContent = `Connection to host: ${ui.link?.state || 'unknown'}` +
-      (r ? ` · ${r.relay ? 'relayed via TURN' : `direct (${r.local}↔${r.remote})`}${r.rtt != null ? ` · ${r.rtt} ms` : ''}` : '');
+    info.textContent = t('menu.linkHost', { state: ui.link?.state || t('menu.unknown') }) +
+      (r ? ` · ${r.relay ? t('menu.relayed') : t('menu.direct', { local: r.local, remote: r.remote })}${r.rtt != null ? ` · ${r.rtt} ms` : ''}` : '');
   }
   openDialog('dlg-menu');
 }
 
 function openSettings() {
+  $('#lang-select').value = savedLang();
   $('#signal-url').value = savedSignalingUrl();
   $('#signal-url').placeholder = defaultSignalingUrl() || 'https://signal.example.com';
   const s = loadTurnSettings();
@@ -1123,20 +1122,35 @@ function openSettings() {
 function saveSettings() {
   const urls = $('#turn-urls').value.trim();
   const relayOnly = $('#turn-relay').checked;
-  if (relayOnly && !urls) return toast('Relay-only needs a TURN server', { error: true });
+  if (relayOnly && !urls) return toast(t('toast.relayNeedsTurn'), { error: true });
   if (urls && !urls.split(',').every(u => /^turns?:/.test(u.trim()))) {
-    return toast('TURN URLs start with turn: or turns:', { error: true });
+    return toast(t('toast.turnUrl'), { error: true });
   }
   saveTurnSettings({ urls, username: $('#turn-user').value.trim(), credential: $('#turn-pass').value, relayOnly });
   saveSignalingUrl($('#signal-url').value.trim());
+  setLang($('#lang-select').value);
   closeDialog('dlg-settings');
-  toast('Saved — applies to new connections');
+  translatePage();
+  toast(t('toast.saved'));
+}
+
+// Applies the current language to all static and rendered text.
+function translatePage() {
+  applyI18n();
+  for (const o of $('#bot-count').options) o.textContent = t('home.bots', { n: Number(o.value) });
+  const sel = $('#lang-select');
+  sel.options[0].textContent = t('settings.langAuto');
+  for (const o of [...sel.options].slice(1)) o.textContent = LANGS[o.value];
   updateServerNote();
+  if (ui.view) render();
 }
 
 // ---------------------------------------------------------------- init
 
 function bind() {
+  const langSel = $('#lang-select');
+  for (const code of Object.keys(LANGS)) langSel.append(new Option(LANGS[code], code));
+  translatePage();
   $('#name').value = store('local', 'romme.name') || '';
   const params = new URLSearchParams(location.search);
   const room = params.get('room');
@@ -1179,7 +1193,7 @@ function bind() {
   $('#btn-share').onclick = async () => {
     const url = roomUrl(ui.room);
     if (navigator.share) {
-      try { await navigator.share({ title: 'Rommé', text: `Join my Rommé table ${ui.room}`, url }); return; } catch { /* cancelled */ }
+      try { await navigator.share({ title: 'Rommé', text: t('lobby.shareText', { room: ui.room }), url }); return; } catch { /* cancelled */ }
     }
     copyText(url);
   };
@@ -1189,12 +1203,12 @@ function bind() {
   $('#discard').onclick = () => {
     if (drawFrom('discard')) return;
     if (canPlay() && ui.selected.size === 1) discardCard([...ui.selected][0]);
-    else if (canPlay()) toast('Select one card to discard');
+    else if (canPlay()) toast(t('toast.selectOne'));
   };
   $('#melds').addEventListener('click', (ev) => {
     const m = ev.target.closest('[data-meld]');
     if (!m) return;
-    if (!ui.selected.size) return toast('Select cards from your hand first');
+    if (!ui.selected.size) return toast(t('toast.selectFirst'));
     playOnMeld(Number(m.dataset.meld), [...ui.selected]);
   });
   $('#btn-meld').onclick = () => stageOrMeld([...ui.selected]);
@@ -1210,7 +1224,7 @@ function bind() {
     if (ui.staged.length) act({ type: 'meld', groups: ui.staged });
   };
   $('#btn-menu').onclick = openMenu;
-  $('#btn-quit').onclick = () => { if (confirm('Leave this game?')) leave(); };
+  $('#btn-quit').onclick = () => { if (confirm(t('menu.leaveConfirm'))) leave(); };
   $('#btn-next-round').onclick = () => { closeDialog('dlg-round'); ui.session?.act({ type: 'nextRound' }); };
 
   const cutDeck = $('#cut-deck');
@@ -1243,19 +1257,17 @@ function bind() {
   $('#btn-save-settings').onclick = saveSettings;
 
   window.addEventListener('resize', () => layoutHand());
-
-  updateServerNote();
 }
 
 function updateServerNote() {
   const note = $('#server-note');
-  note.textContent = 'Checking signaling server…';
+  note.textContent = t('home.sigChecking');
   getNetConfig().then(cfg => {
     note.textContent = cfg.signaling
-      ? `Signaling: ${new URL(cfg.base).host} · games run peer‑to‑peer over WebRTC`
+      ? t('home.sigOk', { host: new URL(cfg.base).host })
       : cfg.base
-        ? `Signaling server ${new URL(cfg.base).host} unreachable · use invite codes`
-        : 'No signaling server configured · use invite codes to connect';
+        ? t('home.sigDown', { host: new URL(cfg.base).host })
+        : t('home.sigNone');
   });
 }
 

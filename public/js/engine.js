@@ -13,6 +13,18 @@
 
 import { createDeck, shuffle, penalty, describe } from './cards.js';
 import { analyzeMeld, layOff, swapJoker, MIN_INITIAL_MELD } from './rules.js';
+import { tr } from './i18n.js';
+
+// Errors carry a translation key + params; `message` is the English text.
+export class GameError extends Error {
+  constructor(key, params = {}) {
+    super(tr('en', key, params));
+    this.key = key;
+    this.params = params;
+  }
+}
+const fail = (key, params) => { throw new GameError(key, params); };
+const cardsText = (cards) => cards.map(describe).join(' ');
 
 export const HAND_SIZE = 12;
 export const CUT_PEEK = 3;
@@ -37,8 +49,8 @@ export class Game {
   }
 
   addPlayer(id, name, { bot = false } = {}) {
-    if (this.phase !== 'lobby') throw new Error('Game already started');
-    if (this.players.length >= MAX_PLAYERS) throw new Error('Table is full');
+    if (this.phase !== 'lobby') fail('err.gameStarted');
+    if (this.players.length >= MAX_PLAYERS) fail('err.tableFull');
     if (this.player(id)) return this.player(id);
     const p = { id, name: String(name || 'Player').slice(0, 20), bot, hand: [], cameOut: false, cameOutTurn: -1, score: 0 };
     this.players.push(p);
@@ -71,7 +83,7 @@ export class Game {
   }
 
   start() {
-    if (this.players.length < MIN_PLAYERS) throw new Error(`Need at least ${MIN_PLAYERS} players`);
+    if (this.players.length < MIN_PLAYERS) fail('err.minPlayers', { n: MIN_PLAYERS });
     this.round = 0;
     this.dealer = Math.floor(Math.random() * this.players.length);
     for (const p of this.players) p.score = 0;
@@ -95,12 +107,12 @@ export class Game {
     this.result = null;
     this.cutResult = null;
     this.phase = 'cut';
-    this.say(`Round ${this.round} — ${this.cutter.name} cuts the deck`);
+    this.say('log.roundCut', { round: this.round, name: this.cutter.name });
   }
 
   // `at` is where to cut, as a fraction 0..1 of the deck.
   #cut(p, at) {
-    if (this.cutter !== p) throw new Error('Only the cutter can cut the deck');
+    if (this.cutter !== p) fail('err.notCutter');
     const deck = this.stock;
     const frac = Number.isFinite(at) ? Math.min(1, Math.max(0, at)) : 0.5;
     const idx = CUT_PEEK + Math.round(frac * (deck.length - 2 * CUT_PEEK));
@@ -111,9 +123,7 @@ export class Game {
     p.hand.push(...kept);
     this.cutResult = { player: p.id, peek, kept: kept.map(c => c.id) };
     this.#deal(rest);
-    this.say((kept.length
-      ? `${p.name} cut and kept ${kept.length === 1 ? 'a joker' : kept.length + ' jokers'}!`
-      : `${p.name} cut — no joker.`) + ` ${this.current.name} starts`);
+    this.say('log.cut', { name: p.name, kept: kept.length, starter: this.current.name });
   }
 
   #deal(deck) {
@@ -125,8 +135,9 @@ export class Game {
     this.phase = 'play';
   }
 
-  say(text) {
-    this.log.push(text);
+  // Log entries are { key, params } so every device can show its own language.
+  say(key, params = {}) {
+    this.log.push({ key, params });
     if (this.log.length > 40) this.log.shift();
   }
 
@@ -136,25 +147,25 @@ export class Game {
       this.#apply(playerId, action || {});
       return { ok: true };
     } catch (e) {
-      return { ok: false, error: e.message };
+      return { ok: false, error: e.message, key: e.key, params: e.params };
     }
   }
 
   #apply(playerId, action) {
     const p = this.player(playerId);
-    if (!p) throw new Error('Unknown player');
+    if (!p) fail('err.unknownPlayer');
     if (action.type === 'nextRound') {
-      if (this.phase !== 'roundOver') throw new Error('Round is still running');
+      if (this.phase !== 'roundOver') fail('err.roundRunning');
       this.startRound();
       return;
     }
     if (action.type === 'cut') {
-      if (this.phase !== 'cut') throw new Error('The deck has already been cut');
+      if (this.phase !== 'cut') fail('err.alreadyCut');
       return this.#cut(p, action.at);
     }
-    if (this.phase === 'cut') throw new Error(`Waiting for ${this.cutter.name} to cut the deck`);
-    if (this.phase !== 'draw' && this.phase !== 'play') throw new Error('No round in progress');
-    if (this.current !== p) throw new Error("It's not your turn");
+    if (this.phase === 'cut') fail('err.waitCut', { name: this.cutter.name });
+    if (this.phase !== 'draw' && this.phase !== 'play') fail('err.noRound');
+    if (this.current !== p) fail('err.notYourTurn');
 
     switch (action.type) {
       case 'draw': return this.#draw(p, action.from);
@@ -162,19 +173,19 @@ export class Game {
       case 'layoff': return this.#layoff(p, action.meldId, action.cardIds);
       case 'swap': return this.#swap(p, action.meldId, action.jokerId, action.cardId);
       case 'discard': return this.#discard(p, action.cardId);
-      default: throw new Error('Unknown action');
+      default: fail('err.unknownAction');
     }
   }
 
   #requirePlay() {
-    if (this.phase === 'draw') throw new Error('Draw a card first');
+    if (this.phase === 'draw') fail('err.drawFirst');
   }
 
   #takeFromHand(p, ids) {
-    if (!Array.isArray(ids) || !ids.length) throw new Error('Select some cards');
-    if (new Set(ids).size !== ids.length) throw new Error('Duplicate cards');
+    if (!Array.isArray(ids) || !ids.length) fail('err.selectCards');
+    if (new Set(ids).size !== ids.length) fail('err.duplicateCards');
     const cards = ids.map(id => p.hand.find(c => c.id === id));
-    if (cards.some(c => !c)) throw new Error('Card not in your hand');
+    if (cards.some(c => !c)) fail('err.notInHand');
     return cards;
   }
 
@@ -184,21 +195,21 @@ export class Game {
   }
 
   #draw(p, from) {
-    if (this.phase !== 'draw') throw new Error('You already drew a card');
+    if (this.phase !== 'draw') fail('err.alreadyDrew');
     if (from === 'discard') {
-      if (!p.cameOut) throw new Error(`You may take from the discard pile once you are out (${MIN_INITIAL_MELD}+ points)`);
+      if (!p.cameOut) fail('err.discardNotOut', { min: MIN_INITIAL_MELD });
       const card = this.discard.pop();
-      if (!card) throw new Error('Discard pile is empty');
+      if (!card) fail('err.discardEmpty');
       p.hand.push(card);
       this.drawnFromDiscard = card.id;
-      this.say(`${p.name} took ${describe(card)} from the discard pile`);
+      this.say('log.tookDiscard', { name: p.name, card: describe(card) });
     } else {
       if (!this.stock.length) this.#recycleDiscard();
       const card = this.stock.pop();
-      if (!card) throw new Error('No cards left to draw');
+      if (!card) fail('err.stockEmpty');
       p.hand.push(card);
       this.drawnFromDiscard = null;
-      this.say(`${p.name} drew from the stock`);
+      this.say('log.drew', { name: p.name });
     }
     this.phase = 'play';
   }
@@ -207,80 +218,80 @@ export class Game {
     const top = this.discard.pop();
     this.stock = shuffle(this.discard);
     this.discard = top ? [top] : [];
-    this.say('Discard pile reshuffled into the stock');
+    this.say('log.reshuffle');
   }
 
   #meld(p, groups) {
     this.#requirePlay();
-    if (!Array.isArray(groups) || !groups.length) throw new Error('Nothing to meld');
+    if (!Array.isArray(groups) || !groups.length) fail('err.nothingToMeld');
     const allIds = groups.flat();
     const cards = this.#takeFromHand(p, allIds);
     const byId = new Map(cards.map(c => [c.id, c]));
     const melds = groups.map(g => {
       const m = analyzeMeld(g.map(id => byId.get(id)));
-      if (!m) throw new Error(`Not a valid set or run: ${g.map(id => describe(byId.get(id))).join(' ')}`);
+      if (!m) fail('err.invalidMeld', { cards: cardsText(g.map(id => byId.get(id))) });
       return m;
     });
     const points = melds.reduce((s, m) => s + m.points, 0);
     if (!p.cameOut && points < MIN_INITIAL_MELD) {
-      throw new Error(`First meld needs ${MIN_INITIAL_MELD} points (you have ${points})`);
+      fail('err.firstMeldMin', { min: MIN_INITIAL_MELD, points });
     }
     this.#removeFromHand(p, cards);
     for (const m of melds) this.melds.push({ id: this.nextMeldId++, owner: p.id, ...m });
     if (!p.cameOut) {
       p.cameOut = true;
       p.cameOutTurn = this.turnNo;
-      this.say(`${p.name} came out with ${points} points`);
+      this.say('log.cameOut', { name: p.name, points });
     } else {
-      this.say(`${p.name} melded ${melds.length > 1 ? melds.length + ' groups' : 'a ' + melds[0].type}`);
+      this.say('log.melded', { name: p.name, n: melds.length, type: melds[0].type });
     }
     this.#checkOut(p);
   }
 
   #findMeld(id) {
     const m = this.melds.find(x => x.id === id);
-    if (!m) throw new Error('Meld not found');
+    if (!m) fail('err.meldNotFound');
     return m;
   }
 
   #layoff(p, meldId, cardIds) {
     this.#requirePlay();
-    if (!p.cameOut) throw new Error(`Make your first meld (${MIN_INITIAL_MELD}+ points) before adding to the table`);
+    if (!p.cameOut) fail('err.layoffNotOut', { min: MIN_INITIAL_MELD });
     const meld = this.#findMeld(meldId);
     const cards = this.#takeFromHand(p, cardIds);
     const result = layOff(meld, cards);
-    if (!result) throw new Error(`${cards.map(describe).join(' ')} does not fit there`);
+    if (!result) fail('err.noFit', { cards: cardsText(cards) });
     meld.slots = result.slots;
     meld.points = result.points;
     this.#removeFromHand(p, cards);
-    this.say(`${p.name} added ${cards.map(describe).join(' ')}`);
+    this.say('log.added', { name: p.name, cards: cardsText(cards) });
     this.#checkOut(p);
   }
 
   #swap(p, meldId, jokerId, cardId) {
     this.#requirePlay();
-    if (!p.cameOut) throw new Error('Make your first meld before swapping jokers');
+    if (!p.cameOut) fail('err.swapNotOut');
     const meld = this.#findMeld(meldId);
     const [card] = this.#takeFromHand(p, [cardId]);
     const joker = meld.slots.find(s => s.card.id === jokerId)?.card;
     const result = swapJoker(meld, jokerId, card);
-    if (!result || !joker) throw new Error(`${describe(card)} cannot replace that joker`);
+    if (!result || !joker) fail('err.cannotSwap', { card: describe(card) });
     meld.slots = result.slots;
     meld.points = result.points;
     this.#removeFromHand(p, [card]);
     p.hand.push(joker);
-    this.say(`${p.name} swapped ${describe(card)} for a joker`);
+    this.say('log.swapped', { name: p.name, card: describe(card) });
   }
 
   #discard(p, cardId) {
     this.#requirePlay();
     const [card] = this.#takeFromHand(p, [cardId]);
     if (card.id === this.drawnFromDiscard && p.hand.length > 1) {
-      throw new Error('You cannot throw back the card you just picked up');
+      fail('err.throwBack');
     }
     this.#removeFromHand(p, [card]);
     this.discard.push(card);
-    this.say(`${p.name} discarded ${describe(card)}`);
+    this.say('log.discarded', { name: p.name, card: describe(card) });
     if (this.#checkOut(p)) return;
     this.turn = (this.turn + 1) % this.players.length;
     this.turnNo++;
@@ -302,7 +313,7 @@ export class Game {
     }
     this.result = { winner: p.id, handRomme, penalties, hands };
     this.phase = 'roundOver';
-    this.say(`${p.name} wins round ${this.round}${handRomme ? ' with Hand‑Rommé!' : '!'}`);
+    this.say('log.won', { name: p.name, round: this.round, handRomme });
     return true;
   }
 

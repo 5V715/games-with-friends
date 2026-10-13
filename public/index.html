@@ -19,25 +19,25 @@
     <section id="screen-home" class="screen active">
       <div class="home-card">
         <h1 class="logo"><span class="suit red">♥</span>Rommé<span class="suit">♠</span></h1>
-        <p class="tagline">Play rummy with friends — browser to browser, no account needed.</p>
+        <p class="tagline" data-i18n="home.tagline">Play rummy with friends — browser to browser, no account needed.</p>
 
         <label class="field">
-          <span>Your name</span>
-          <input id="name" type="text" maxlength="20" autocomplete="nickname" placeholder="Name">
+          <span data-i18n="home.name">Your name</span>
+          <input id="name" type="text" maxlength="20" autocomplete="nickname" placeholder="Name" data-i18n-ph="home.namePh">
         </label>
 
-        <button class="btn primary big" id="btn-host">Create table</button>
+        <button class="btn primary big" id="btn-host" data-i18n="home.create">Create table</button>
 
         <div class="join-row">
-          <input id="room-input" type="text" maxlength="8" placeholder="Table code" autocapitalize="characters" autocomplete="off" spellcheck="false">
-          <button class="btn big" id="btn-join">Join</button>
+          <input id="room-input" type="text" maxlength="8" placeholder="Table code" data-i18n-ph="home.codePh" autocapitalize="characters" autocomplete="off" spellcheck="false">
+          <button class="btn big" id="btn-join" data-i18n="home.join">Join</button>
         </div>
 
-        <button class="btn ghost" id="btn-manual-join">Join with an invite code (no server)</button>
+        <button class="btn ghost" id="btn-manual-join" data-i18n="home.manualJoin">Join with an invite code (no server)</button>
 
         <div class="practice-row">
-          <button class="btn big" id="btn-practice">Practice vs bots</button>
-          <select id="bot-count" aria-label="Number of bots">
+          <button class="btn big" id="btn-practice" data-i18n="home.practice">Practice vs bots</button>
+          <select id="bot-count" aria-label="Number of bots" data-i18n-aria="home.botsAria">
             <option value="1">1 bot</option>
             <option value="2" selected>2 bots</option>
             <option value="3">3 bots</option>
@@ -45,8 +45,8 @@
         </div>
 
         <div class="home-links">
-          <button class="link" data-open="dlg-rules">How to play</button>
-          <button class="link" data-open="dlg-settings">Connection settings</button>
+          <button class="link" data-open="dlg-rules" data-i18n="home.howTo">How to play</button>
+          <button class="link" data-open="dlg-settings" data-i18n="home.settings">Settings</button>
         </div>
         <p class="server-note" id="server-note"></p>
       </div>
@@ -55,26 +55,26 @@
     <!-- Lobby -->
     <section id="screen-lobby" class="screen">
       <header class="bar">
-        <button class="btn icon" id="btn-leave-lobby" aria-label="Leave">✕</button>
-        <h2>Table</h2>
+        <button class="btn icon" id="btn-leave-lobby" aria-label="Leave" data-i18n-aria="lobby.leave">✕</button>
+        <h2 data-i18n="lobby.title">Table</h2>
         <span class="link-dot" id="lobby-link" title="Connection"></span>
       </header>
       <div class="lobby-body">
         <div class="room-box" id="room-box">
-          <span class="room-label">Table code</span>
+          <span class="room-label" data-i18n="lobby.code">Table code</span>
           <span class="room-code" id="room-code">—</span>
-          <button class="btn" id="btn-share">Share invite link</button>
+          <button class="btn" id="btn-share" data-i18n="lobby.share">Share invite link</button>
         </div>
 
         <ul class="player-list" id="lobby-players"></ul>
 
         <div class="lobby-actions host-only">
-          <button class="btn" id="btn-add-bot">+ Add bot</button>
-          <button class="btn" id="btn-manual-invite">+ Invite with code</button>
+          <button class="btn" id="btn-add-bot" data-i18n="lobby.addBot">+ Add bot</button>
+          <button class="btn" id="btn-manual-invite" data-i18n="lobby.invite">+ Invite with code</button>
         </div>
-        <button class="btn big ptt" id="btn-ptt-lobby" aria-label="Hold to talk">🎤 Hold to talk</button>
-        <button class="btn primary big host-only" id="btn-start">Start game</button>
-        <p class="guest-only waiting">Waiting for the host to start…</p>
+        <button class="btn big ptt" id="btn-ptt-lobby" aria-label="Hold to talk" data-i18n="ptt.hold" data-i18n-aria="ptt.aria">🎤 Hold to talk</button>
+        <button class="btn primary big host-only" id="btn-start" data-i18n="lobby.start">Start game</button>
+        <p class="guest-only waiting" data-i18n="lobby.waiting">Waiting for the host to start…</p>
       </div>
     </section>
 
@@ -85,18 +85,18 @@
       <div class="table" id="table">
         <div class="cut-panel" id="cut-panel" hidden>
           <h2 id="cut-title">Cut the deck</h2>
-          <p class="hint" id="cut-hint">Tap anywhere on the deck to cut it. You'll see the 3 cards at the cut — any joker among them is yours!</p>
-          <div class="cut-deck" id="cut-deck" role="slider" aria-label="Where to cut the deck"></div>
+          <p class="hint" id="cut-hint" data-i18n="cut.hint">Tap anywhere on the deck to cut it. You'll see the 3 cards at the cut — any joker among them is yours!</p>
+          <div class="cut-deck" id="cut-deck" role="slider" aria-label="Where to cut the deck" data-i18n-aria="cut.aria"></div>
         </div>
         <div class="melds" id="melds"></div>
       </div>
 
       <div class="piles">
-        <button class="pile stock" id="stock" data-drop="stock" aria-label="Draw from stock">
+        <button class="pile stock" id="stock" data-drop="stock" aria-label="Draw from stock" data-i18n-aria="game.drawStock">
           <div class="card back"></div>
           <span class="pile-count" id="stock-count"></span>
         </button>
-        <button class="pile discard" id="discard" data-drop="discard" aria-label="Discard pile"></button>
+        <button class="pile discard" id="discard" data-drop="discard" aria-label="Discard pile" data-i18n-aria="game.discardPile"></button>
         <div class="status" id="status"></div>
       </div>
 
@@ -104,8 +104,8 @@
         <div class="staged-groups" id="staged-groups"></div>
         <div class="staging-actions">
           <span class="staged-points" id="staged-points"></span>
-          <button class="btn small" id="btn-unstage">Undo</button>
-          <button class="btn small primary" id="btn-laydown">Lay down</button>
+          <button class="btn small" id="btn-unstage" data-i18n="game.undo">Undo</button>
+          <button class="btn small primary" id="btn-laydown" data-i18n="game.layDown">Lay down</button>
         </div>
       </div>
 
@@ -114,28 +114,28 @@
       </div>
 
       <footer class="actions" id="actions">
-        <button class="btn icon" id="btn-menu" aria-label="Menu">☰</button>
+        <button class="btn icon" id="btn-menu" aria-label="Menu" data-i18n-aria="game.menu">☰</button>
         <button class="btn" id="btn-sort">Sort</button>
         <button class="btn primary" id="btn-meld">Meld</button>
-        <button class="btn" id="btn-discard">Discard</button>
-        <button class="btn icon ptt" id="btn-ptt" aria-label="Hold to talk" title="Hold to talk">🎤</button>
+        <button class="btn" id="btn-discard" data-i18n="game.discard">Discard</button>
+        <button class="btn icon ptt" id="btn-ptt" aria-label="Hold to talk" title="Hold to talk" data-i18n-aria="ptt.aria" data-i18n-title="ptt.aria">🎤</button>
       </footer>
     </section>
 
     <div class="toast" id="toast" role="status" aria-live="polite"></div>
     <div class="ptt-indicator" id="ptt-indicator" aria-live="polite" hidden>
-      <span class="rec-dot"></span><span id="ptt-time">0s</span> · release to send
+      <span class="rec-dot"></span><span id="ptt-time">0s</span>
     </div>
   </main>
 
   <!-- Round over -->
   <dialog id="dlg-round" class="sheet">
-    <h2 id="round-title">Round over</h2>
+    <h2 id="round-title" data-i18n="round.title">Round over</h2>
     <table class="scores" id="round-scores"></table>
     <div class="dlg-actions">
-      <button class="btn" data-close>Show table</button>
-      <button class="btn primary host-only" id="btn-next-round">Next round</button>
-      <p class="guest-only waiting">Waiting for the host…</p>
+      <button class="btn" data-close data-i18n="round.showTable">Show table</button>
+      <button class="btn primary host-only" id="btn-next-round" data-i18n="round.next">Next round</button>
+      <p class="guest-only waiting" data-i18n="round.waiting">Waiting for the host…</p>
     </div>
   </dialog>
 
@@ -144,105 +144,80 @@
     <h2 id="cut-result-title">Your cut</h2>
     <div class="cut-peek" id="cut-peek"></div>
     <p class="hint" id="cut-result-text"></p>
-    <div class="dlg-actions"><button class="btn primary" data-close>Play</button></div>
+    <div class="dlg-actions"><button class="btn primary" data-close data-i18n="cut.play">Play</button></div>
   </dialog>
 
   <!-- In-game menu -->
   <dialog id="dlg-menu" class="sheet">
-    <h2>Menu</h2>
+    <h2 data-i18n="menu.title">Menu</h2>
     <table class="scores" id="menu-scores"></table>
     <div class="menu-conn" id="menu-conn"></div>
     <div class="dlg-actions column">
-      <button class="btn" data-open="dlg-rules">How to play</button>
-      <button class="btn danger" id="btn-quit">Leave game</button>
-      <button class="btn primary" data-close>Back to game</button>
+      <button class="btn" data-open="dlg-rules" data-i18n="home.howTo">How to play</button>
+      <button class="btn danger" id="btn-quit" data-i18n="menu.leave">Leave game</button>
+      <button class="btn primary" data-close data-i18n="menu.back">Back to game</button>
     </div>
   </dialog>
 
   <!-- Host: manual invite -->
   <dialog id="dlg-invite" class="sheet">
-    <h2>Invite with a code</h2>
-    <p class="hint">Works without the signaling server. Send this <b>invite code</b> to one friend (chat, mail…):</p>
-    <textarea id="invite-code" readonly rows="4" placeholder="Gathering ICE candidates…"></textarea>
-    <button class="btn" id="btn-copy-invite">Copy invite code</button>
-    <p class="hint">Then paste the <b>reply code</b> they send back:</p>
-    <textarea id="invite-answer" rows="4" placeholder="Paste reply code"></textarea>
+    <h2 data-i18n="invite.title">Invite with a code</h2>
+    <p class="hint" data-i18n-html="invite.hint1">Works without the signaling server. Send this <b>invite code</b> to one friend (chat, mail…):</p>
+    <textarea id="invite-code" readonly rows="4" placeholder="Gathering ICE candidates…" data-i18n-ph="invite.gathering"></textarea>
+    <button class="btn" id="btn-copy-invite" data-i18n="invite.copy">Copy invite code</button>
+    <p class="hint" data-i18n-html="invite.hint2">Then paste the <b>reply code</b> they send back:</p>
+    <textarea id="invite-answer" rows="4" placeholder="Paste reply code" data-i18n-ph="invite.answerPh"></textarea>
     <div class="dlg-actions">
-      <button class="btn" id="btn-invite-cancel">Cancel</button>
-      <button class="btn primary" id="btn-invite-connect">Connect</button>
+      <button class="btn" id="btn-invite-cancel" data-i18n="invite.cancel">Cancel</button>
+      <button class="btn primary" id="btn-invite-connect" data-i18n="invite.connect">Connect</button>
     </div>
   </dialog>
 
   <!-- Guest: manual join -->
   <dialog id="dlg-manual-join" class="sheet">
-    <h2>Join with an invite code</h2>
-    <p class="hint">Paste the <b>invite code</b> from the host:</p>
-    <textarea id="join-offer" rows="4" placeholder="Paste invite code"></textarea>
-    <button class="btn primary" id="btn-make-answer">Create reply code</button>
+    <h2 data-i18n="join.title">Join with an invite code</h2>
+    <p class="hint" data-i18n-html="join.hint1">Paste the <b>invite code</b> from the host:</p>
+    <textarea id="join-offer" rows="4" placeholder="Paste invite code" data-i18n-ph="join.offerPh"></textarea>
+    <button class="btn primary" id="btn-make-answer" data-i18n="join.makeAnswer">Create reply code</button>
     <div id="join-answer-box" hidden>
-      <p class="hint">Send this <b>reply code</b> back to the host. You'll join as soon as they paste it.</p>
+      <p class="hint" data-i18n-html="join.hint2">Send this <b>reply code</b> back to the host. You'll join as soon as they paste it.</p>
       <textarea id="join-answer" readonly rows="4"></textarea>
-      <button class="btn" id="btn-copy-answer">Copy reply code</button>
+      <button class="btn" id="btn-copy-answer" data-i18n="join.copy">Copy reply code</button>
     </div>
     <div class="dlg-actions">
-      <button class="btn" id="btn-manual-cancel">Cancel</button>
+      <button class="btn" id="btn-manual-cancel" data-i18n="invite.cancel">Cancel</button>
     </div>
   </dialog>
 
   <!-- Settings -->
   <dialog id="dlg-settings" class="sheet">
-    <h2>Connection settings</h2>
-    <p class="hint">The <b>signaling server</b> only introduces players to each other (table codes).
+    <h2 data-i18n="settings.title">Settings</h2>
+    <label class="field"><span data-i18n="settings.language">Language</span>
+      <select id="lang-select"><option value="">Automatic (browser)</option></select></label>
+    <p class="hint" data-i18n-html="settings.sigHint">The <b>signaling server</b> only introduces players to each other (table codes).
       Leave empty to use the default; without one, connect with invite codes.</p>
-    <label class="field"><span>Signaling server URL</span>
+    <label class="field"><span data-i18n="settings.sigUrl">Signaling server URL</span>
       <input id="signal-url" type="url" inputmode="url" autocomplete="off" spellcheck="false"></label>
-    <p class="hint">Players connect directly using WebRTC. STUN finds a direct route; if a firewall blocks it,
+    <p class="hint" data-i18n-html="settings.turnHint">Players connect directly using WebRTC. STUN finds a direct route; if a firewall blocks it,
       a <b>TURN</b> relay is needed. Add your own TURN server here (stored on this device only).</p>
-    <label class="field"><span>TURN URLs (comma separated)</span>
+    <label class="field"><span data-i18n="settings.turnUrls">TURN URLs (comma separated)</span>
       <input id="turn-urls" type="text" placeholder="turn:turn.example.com:3478" autocomplete="off" spellcheck="false"></label>
-    <label class="field"><span>Username</span>
+    <label class="field"><span data-i18n="settings.user">Username</span>
       <input id="turn-user" type="text" autocomplete="off" spellcheck="false"></label>
-    <label class="field"><span>Credential</span>
+    <label class="field"><span data-i18n="settings.cred">Credential</span>
       <input id="turn-pass" type="password" autocomplete="off"></label>
-    <label class="check"><input id="turn-relay" type="checkbox"> Always relay through TURN (hides your IP)</label>
+    <label class="check"><input id="turn-relay" type="checkbox"> <span data-i18n="settings.relay">Always relay through TURN (hides your IP)</span></label>
     <div class="dlg-actions">
-      <button class="btn" data-close>Cancel</button>
-      <button class="btn primary" id="btn-save-settings">Save</button>
+      <button class="btn" data-close data-i18n="settings.cancel">Cancel</button>
+      <button class="btn primary" id="btn-save-settings" data-i18n="settings.save">Save</button>
     </div>
   </dialog>
 
   <!-- Rules -->
   <dialog id="dlg-rules" class="sheet">
-    <h2>How to play</h2>
-    <div class="rules">
-      <p>110 cards: two decks plus 6 jokers. Everyone gets 12 cards; the starting player gets 13 and begins by discarding (no draw on the first turn). Get rid of all your cards first.</p>
-      <h3>Cutting the deck</h3>
-      <p>Before each round the player to the dealer's right cuts the deck and looks at the 3 cards at the cut.
-        Any jokers among them they keep (they count towards their 12 cards).</p>
-      <h3>Your turn</h3>
-      <ol>
-        <li><b>Draw</b> – tap the stock. Once you are out, you may take the top card of the discard pile instead.</li>
-        <li><b>Meld</b> (optional) – select cards and tap <i>Meld</i>.</li>
-        <li><b>Discard</b> – select one card and tap the discard pile.</li>
-      </ol>
-      <h3>Melds</h3>
-      <p><b>Set:</b> 3–4 cards of the same rank, all different suits (7♥ 7♠ 7♦).<br>
-         <b>Run:</b> 3+ cards in a row, same suit (4♣ 5♣ 6♣). Ace is low (A‑2‑3) or high (Q‑K‑A).<br>
-         <b>Jokers</b> replace any card.</p>
-      <h3>Coming out</h3>
-      <p>Your first meld must be worth at least <b>40 points</b> (2–9 face value, 10/J/Q/K = 10, ace = 11 or 1 in A‑2‑3).
-        Stage several groups and tap <i>Lay down</i>. Once you are out — and only on your turn — you may take from the
-        discard pile, add cards to any meld on the table (select cards, tap the meld) and swap a joker for the card it
-        stands for if you hold that card.</p>
-      <h3>Scoring</h3>
-      <p>When someone goes out, the others score their remaining cards as penalty: joker 20, ace 11, pictures 10,
-        others face value. Going out in a single turn (<b>Hand‑Rommé</b>) doubles the penalty. Lowest total wins.</p>
-      <h3>Talking</h3>
-      <p>Hold the 🎤 button and speak (up to 15 seconds); let go to send. Everyone at the table hears it right away.</p>
-      <h3>Touch tips</h3>
-      <p>Tap to select. Drag a card to rearrange your hand, or drag it onto a meld or the discard pile.</p>
-    </div>
-    <div class="dlg-actions"><button class="btn primary" data-close>Got it</button></div>
+    <h2 data-i18n="rules.title">How to play</h2>
+    <div class="rules" data-i18n-html="rules.html"></div>
+    <div class="dlg-actions"><button class="btn primary" data-close data-i18n="rules.ok">Got it</button></div>
   </dialog>
 
   <script type="module" src="js/main.js"></script>

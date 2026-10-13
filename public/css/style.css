@@ -257,7 +257,7 @@ body.is-host .guest-only { display: none !important; }
   align-content: flex-start;
 }
 .melds:empty::before {
-  content: 'No melds yet — first meld needs 40 points';
+  content: attr(data-empty);
   color: var(--ink-dim);
   font-size: 14px;
   margin: auto;
@@ -507,7 +507,7 @@ body.dragging-cards, body.dragging-cards * { cursor: grabbing !important; }
   background: rgba(0, 0, 0, .25);
   flex: 0 0 auto;
 }
-.actions .btn { flex: 1; }
+.actions .btn { flex: 1; white-space: nowrap; padding: 0 10px; }
 .actions .btn.icon { flex: 0 0 44px; }
 
 /* ---------- Push to talk ---------- */

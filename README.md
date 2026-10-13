@@ -24,6 +24,10 @@ between browsers, so game traffic never goes through a server.
   2. **Invite codes** you copy and paste. No server at all: the SDP offer/answer is
      compressed into a short code you can send over any chat.
   3. **Practice** offline against bots.
+- German and English. The language follows the browser, and any other browser
+  language falls back to English. You can change it under **Settings → Language** or
+  with `?lang=de` / `?lang=en`. Game messages are translated on each device, so
+  players at the same table can use different languages.
 - Connection status per player (direct P2P vs. TURN relay, round-trip time).
 - Push to talk: hold 🎤 to record a short voice message (up to 15 s). It is sent
   peer-to-peer to everyone at the table and plays right away. This needs HTTPS and
@@ -54,6 +58,8 @@ between browsers, so game traffic never goes through a server.
 | `public/js/net.js` | WebRTC/ICE links, signaling client, invite codes |
 | `public/js/session.js` | Host/guest sessions between the engine and the network |
 | `public/js/main.js` | UI rendering and touch interaction |
+| `public/js/i18n.js` | German and English texts, language detection |
+| `public/js/voice.js` | Push-to-talk recording, chunking and playback |
 | `public/config.js` | `SIGNALING_URL` for the deployed site |
 | `server/server.js` | Signaling relay (no dependencies) |
 | `server/Containerfile` | OCI image definition |

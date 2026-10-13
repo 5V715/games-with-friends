@@ -8,7 +8,8 @@
 //   'link'   { state, route } (guest only) – connection quality to the host
 //   'voice'  { from, blob } – a push-to-talk clip from another player
 
-import { Game, MAX_PLAYERS } from './engine.js';
+import { Game, GameError, MAX_PLAYERS } from './engine.js';
+import { tr } from './i18n.js';
 import { botStep } from './bot.js';
 import { VoiceAssembler, clipToMessages, validVoiceMessage } from './voice.js';
 
@@ -18,6 +19,11 @@ const AWAY_DELAY = 8000; // a disconnected human is auto-played after this
 
 function emit(target, type, detail) {
   target.dispatchEvent(new CustomEvent(type, { detail }));
+}
+
+// Error message for a guest: translation key + params, plus English text.
+function errorMsg(key, params = {}, extra = {}) {
+  return { t: 'error', key, params, message: tr('en', key, params), ...extra };
 }
 
 function cleanId(id) {
@@ -60,7 +66,7 @@ export class HostSession extends EventTarget {
     if (!pid) return;
     if (msg.t === 'action') {
       const res = this.apply(pid, msg.action);
-      if (!res.ok) this.net.send(peerId, { t: 'error', message: res.error });
+      if (!res.ok) this.net.send(peerId, errorMsg(res.key || 'err.badAction', res.params));
     } else if (msg.t === 'voice' && validVoiceMessage(msg)) {
       // The host decides who a clip is from, then forwards it to everyone else.
       const chunk = { ...msg, from: pid };
@@ -88,16 +94,16 @@ export class HostSession extends EventTarget {
     let player = this.game.player(pid);
     if (!player) {
       if (this.game.phase !== 'lobby') {
-        this.net.send(peerId, { t: 'error', message: 'This game has already started', fatal: true });
+        this.net.send(peerId, errorMsg('err.gameStartedJoin', {}, { fatal: true }));
         return;
       }
       if (this.game.players.length >= MAX_PLAYERS) {
-        this.net.send(peerId, { t: 'error', message: 'The table is full', fatal: true });
+        this.net.send(peerId, errorMsg('err.tableFull', {}, { fatal: true }));
         return;
       }
       player = this.game.addPlayer(pid, msg.name);
     } else if (player.bot || pid === this.myId) {
-      this.net.send(peerId, { t: 'error', message: 'Seat is taken', fatal: true });
+      this.net.send(peerId, errorMsg('err.seatTaken', {}, { fatal: true }));
       return;
     }
     const oldPeer = this.playerToPeer.get(pid);
@@ -137,27 +143,27 @@ export class HostSession extends EventTarget {
         return;
       }
       case 'removePlayer': {
-        if (action.playerId === this.myId) throw new Error('You cannot remove yourself');
+        if (action.playerId === this.myId) throw new GameError('err.removeSelf');
         const peer = this.playerToPeer.get(action.playerId);
         if (peer) {
-          this.net.send(peer, { t: 'error', message: 'The host removed you from the table', fatal: true });
+          this.net.send(peer, errorMsg('err.removed', {}, { fatal: true }));
           this.net.kick(peer);
         }
         g.removePlayer(action.playerId);
         return;
       }
       default:
-        throw new Error('Unknown action');
+        throw new GameError('err.unknownAction');
     }
   }
 
   apply(pid, action) {
-    if (!action || typeof action !== 'object') return { ok: false, error: 'Bad action' };
+    if (!action || typeof action !== 'object') return { ok: false, error: 'Bad action', key: 'err.badAction' };
     let res;
     if (['start', 'addBot', 'removePlayer', 'nextRound'].includes(action.type) && pid !== this.myId) {
-      res = { ok: false, error: 'Only the host can do that' };
+      res = { ok: false, error: 'Only the host can do that', key: 'err.hostOnly' };
     } else if (['start', 'addBot', 'removePlayer'].includes(action.type)) {
-      try { this.#hostAction(action); res = { ok: true }; } catch (e) { res = { ok: false, error: e.message }; }
+      try { this.#hostAction(action); res = { ok: true }; } catch (e) { res = { ok: false, error: e.message, key: e.key, params: e.params }; }
     } else {
       res = this.game.apply(pid, action);
     }
@@ -167,7 +173,7 @@ export class HostSession extends EventTarget {
 
   act(action) {
     const res = this.apply(this.myId, action);
-    if (!res.ok) emit(this, 'error', { message: res.error });
+    if (!res.ok) emit(this, 'error', { message: res.error, key: res.key, params: res.params });
     return res;
   }
 
@@ -223,7 +229,14 @@ export class GuestSession extends EventTarget {
     this.ended = false;
     this.voice = new VoiceAssembler();
 
-    net.addEventListener('open', () => net.send({ t: 'join', name, clientId: this.clientId }));
+    // The very first message on a fresh data channel is occasionally lost, so
+    // keep asking to join until the host welcomes us (joining is idempotent).
+    net.addEventListener('open', () => {
+      clearInterval(this.joinTimer);
+      const join = () => net.send({ t: 'join', name, clientId: this.clientId });
+      join();
+      this.joinTimer = setInterval(join, 1500);
+    });
     net.addEventListener('message', (ev) => this.#onMessage(ev.detail));
     net.addEventListener('linkstate', (ev) => emit(this, 'link', ev.detail));
     net.addEventListener('close', () => this.#lost());
@@ -231,6 +244,7 @@ export class GuestSession extends EventTarget {
   }
 
   #lost() {
+    clearInterval(this.joinTimer);
     if (this.ended) return;
     emit(this, 'link', { state: 'offline', route: null });
     emit(this, 'disconnected', {});
@@ -239,13 +253,17 @@ export class GuestSession extends EventTarget {
   #onMessage(msg) {
     if (!msg || typeof msg !== 'object') return;
     if (msg.t === 'welcome') {
+      clearInterval(this.joinTimer);
       this.myId = msg.you;
     } else if (msg.t === 'state') {
       this.view = msg.view;
       emit(this, 'state', { view: msg.view });
     } else if (msg.t === 'error') {
-      if (msg.fatal) this.ended = true;
-      emit(this, 'error', { message: msg.message, fatal: !!msg.fatal });
+      if (msg.fatal) {
+        this.ended = true;
+        clearInterval(this.joinTimer);
+      }
+      emit(this, 'error', { message: msg.message, key: msg.key, params: msg.params, fatal: !!msg.fatal });
     } else if (msg.t === 'voice') {
       const clip = this.voice.add(msg);
       if (clip) emit(this, 'voice', clip);
@@ -267,6 +285,7 @@ export class GuestSession extends EventTarget {
 
   close() {
     this.ended = true;
+    clearInterval(this.joinTimer);
     this.net.close();
   }
 }

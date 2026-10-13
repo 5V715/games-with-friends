@@ -12,6 +12,7 @@
 //   • Manual    – copy/paste a connection code (works with no server at all).
 
 import { SIGNALING_URL } from '../config.js';
+import { t } from './i18n.js';
 
 const DEFAULT_ICE = [{ urls: ['stun:stun.l.google.com:19302', 'stun:stun1.l.google.com:19302'] }];
 const TURN_KEY = 'romme.turn';
@@ -137,7 +138,7 @@ export async function decodeCode(code) {
   const kind = code.slice(0, 3);
   let bytes = fromBase64Url(code.slice(3));
   if (kind === 'R1z') bytes = await pipe(bytes, new DecompressionStream('deflate-raw'));
-  else if (kind !== 'R1p') throw new Error('Not a Rommé connection code');
+  else if (kind !== 'R1p') throw new Error(t('code.notCode'));
   const obj = JSON.parse(new TextDecoder().decode(bytes));
   return { type: obj.t, sdp: obj.s };
 }
@@ -152,6 +153,7 @@ export class Signaling extends EventTarget {
     this.peerId = peerId;
     this.role = role;
     this.es = null;
+    this.queue = Promise.resolve();
   }
 
   // Resolves once the server has registered us in the room.
@@ -184,13 +186,19 @@ export class Signaling extends EventTarget {
     });
   }
 
-  async send(to, data) {
-    const res = await fetch(`${this.base}/api/signal`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ room: this.room, from: this.peerId, to, data }),
+  // Messages are sent one after another so they arrive in order (an ICE
+  // candidate must not overtake the offer it belongs to).
+  send(to, data) {
+    const next = this.queue.then(async () => {
+      const res = await fetch(`${this.base}/api/signal`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ room: this.room, from: this.peerId, to, data }),
+      });
+      if (!res.ok) throw new Error(`signal failed (${res.status})`);
     });
-    if (!res.ok) throw new Error(`signal failed (${res.status})`);
+    this.queue = next.catch(() => {});
+    return next;
   }
 
   close() {
@@ -353,7 +361,7 @@ export class PeerLink extends EventTarget {
 
   async acceptOfferCode(code) {
     const desc = await decodeCode(code);
-    if (desc.type !== 'offer') throw new Error('That is a reply code — paste the host\'s invite code');
+    if (desc.type !== 'offer') throw new Error(t('code.isReply'));
     await this.pc.setRemoteDescription(desc);
     await this.pc.setLocalDescription(await this.pc.createAnswer());
     await this.#gathered();
@@ -362,7 +370,7 @@ export class PeerLink extends EventTarget {
 
   async acceptAnswerCode(code) {
     const desc = await decodeCode(code);
-    if (desc.type !== 'answer') throw new Error('That is an invite code — paste the guest\'s reply code');
+    if (desc.type !== 'answer') throw new Error(t('code.isInvite'));
     await this.pc.setRemoteDescription(desc);
   }
 
@@ -495,12 +503,18 @@ export class GuestNet extends EventTarget {
   async join(room) {
     this.signaling = new Signaling(this.config.base, room, randomId(10), 'guest');
     const send = (d) => this.signaling.send('host', d).catch(() => {});
+    const early = [];
     this.signaling.addEventListener('message', async ({ detail: { from, data } }) => {
       if (from === 'server') {
         if (data.type === 'host-left') this.dispatchEvent(new Event('hostleft'));
         return;
       }
-      if (data.type === 'offer' && !this.link?.pc.remoteDescription) this.#makeLink(send);
+      if (data.type === 'offer' && !this.link?.pc.remoteDescription) {
+        this.#makeLink(send);
+        // Candidates that arrived before the offer belong to this link.
+        for (const c of early.splice(0)) this.link.handleSignal(c).catch(() => {});
+      }
+      if (!this.link && data.type === 'candidate') { early.push(data); return; }
       await this.link?.handleSignal(data).catch(e => console.warn('signal error', e));
     });
     await this.signaling.connect();
