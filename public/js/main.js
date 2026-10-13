@@ -38,7 +38,7 @@ const ui = {
   freshIds: new Set(),
   selected: new Set(),
   staged: [],
-  sortMode: 'suit',
+  sortMode: null, // last manual sort ('suit' | 'rank'); hands are never auto-sorted
   shownResultRound: 0,
   shownCutRound: 0,
   lastCutPrompt: 0,
@@ -203,7 +203,6 @@ function applyView(view) {
     ui.handOrder = ids;
     ui.staged = [];
     ui.selected.clear();
-    sortHand(ui.sortMode);
   } else {
     ui.handOrder = ui.handOrder.filter(id => idSet.has(id)).concat(ids.filter(id => !ui.handOrder.includes(id)));
   }
@@ -510,7 +509,8 @@ function renderActions() {
   $('#btn-meld').disabled = !play || sel.length < 3;
   $('#btn-meld').textContent = me()?.cameOut ? 'Meld' : 'Group';
   $('#btn-discard').disabled = !play || sel.length !== 1;
-  $('#btn-sort').textContent = ui.sortMode === 'suit' ? 'Sort ♠♥' : 'Sort 7‑7';
+  // The button shows the sort it will apply next.
+  $('#btn-sort').textContent = ui.sortMode === 'suit' ? 'Sort 7‑7' : 'Sort ♠♥';
 }
 
 function updateSelection() {
