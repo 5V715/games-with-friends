@@ -3,6 +3,7 @@
 import { SUIT_SYMBOL, RED_SUITS, SUITS, rankLabel, penalty } from './cards.js';
 import { analyzeMeld, layOff, swapJoker } from './rules.js';
 import { HostSession, GuestSession } from './session.js';
+import { PushToTalk, VoicePlayer, voiceSupported, VOICE_MAX_MS } from './voice.js';
 import {
   HostNet, GuestNet, getNetConfig, randomId, randomRoomCode, loadTurnSettings, saveTurnSettings,
   signalingUrl, savedSignalingUrl, saveSignalingUrl, defaultSignalingUrl,
@@ -47,6 +48,7 @@ const ui = {
   link: null,
   reconnects: 0,
   invite: null,
+  speaking: null, // player id whose voice message is playing
 };
 
 // ---------------------------------------------------------------- helpers
@@ -165,6 +167,7 @@ function attach(session) {
   ui.lastCutPrompt = 0;
   ui.knownMelds = new Set();
   ui.link = null;
+  ui.speaking = null;
   document.body.classList.toggle('is-host', session.isHost);
 
   session.addEventListener('state', (ev) => {
@@ -182,6 +185,10 @@ function attach(session) {
     ui.link = ev.detail;
     if (ev.detail.state === 'open') ui.reconnects = 0;
     renderLink();
+  });
+  session.addEventListener('voice', (ev) => {
+    if (session !== ui.session) return;
+    voicePlayer.enqueue(ev.detail);
   });
   session.addEventListener('disconnected', () => {
     if (session !== ui.session) return;
@@ -222,6 +229,9 @@ function applyView(view) {
 function render() {
   const v = ui.view;
   if (!v) return;
+  const talk = ui.mode !== 'practice' && voiceSupported();
+  $('#btn-ptt').hidden = !talk;
+  $('#btn-ptt-lobby').hidden = !talk;
   if (v.phase === 'lobby') {
     show('lobby');
     renderLobby();
@@ -345,7 +355,8 @@ function renderLobby() {
   list.innerHTML = '';
   for (const p of v.players) {
     const li = document.createElement('li');
-    li.innerHTML = `<span class="pname">${esc(p.name)}${p.id === v.you ? ' (you)' : ''}</span>${connChip(p)}`;
+    li.innerHTML = `<span class="pname">${esc(p.name)}${p.id === v.you ? ' (you)' : ''}${p.id === ui.speaking ? ' 🔊' : ''}</span>${connChip(p)}`;
+    if (p.id === ui.speaking) li.classList.add('speaking');
     if (ui.session.isHost && p.id !== v.you) {
       const b = document.createElement('button');
       b.className = 'btn small';
@@ -377,6 +388,7 @@ function renderOpponents() {
   for (const p of v.players) {
     const el = document.createElement('div');
     el.className = 'opp' + (p.id === v.turn ? ' turn' : '') + (p.id === v.you ? ' me' : '');
+    if (p.id === ui.speaking) el.classList.add('speaking');
     const name = p.id === v.you ? 'You' : p.name;
     el.innerHTML = `
       <span class="mini-back">${p.count}</span>
@@ -833,6 +845,80 @@ function roomUrl(room) {
   return `${location.origin}${location.pathname}?${q}`;
 }
 
+// ---------------------------------------------------------------- push to talk
+
+const ptt = new PushToTalk();
+const voicePlayer = new VoicePlayer();
+let pttTimer = null;
+
+function speakerName(id) {
+  const p = ui.view?.players.find(x => x.id === id);
+  return p ? p.name : 'Someone';
+}
+
+function setSpeaking(id) {
+  ui.speaking = id;
+  if (!ui.view) return;
+  if (ui.view.phase === 'lobby') renderLobby();
+  else renderOpponents();
+}
+
+voicePlayer.addEventListener('start', (ev) => {
+  setSpeaking(ev.detail.from);
+  toast(`🔊 ${speakerName(ev.detail.from)}`, { ms: 1500 });
+});
+voicePlayer.addEventListener('end', (ev) => {
+  setSpeaking(null);
+  if (!ev.detail.ok) toast(`Could not play the message from ${speakerName(ev.detail.from)}`, { error: true });
+});
+
+ptt.addEventListener('state', (ev) => {
+  const recording = ev.detail === 'recording';
+  for (const b of $$('.btn.ptt')) b.classList.toggle('recording', ev.detail !== 'idle');
+  $('#ptt-indicator').hidden = !recording;
+  clearInterval(pttTimer);
+  if (recording) {
+    buzz(15);
+    const t0 = Date.now();
+    const tick = () => {
+      const s = Math.floor((Date.now() - t0) / 1000);
+      $('#ptt-time').textContent = `${s}s / ${VOICE_MAX_MS / 1000}s`;
+    };
+    tick();
+    pttTimer = setInterval(tick, 250);
+  }
+});
+
+ptt.addEventListener('clip', async (ev) => {
+  const s = ui.session;
+  if (!s?.canTalk) return toast('Nobody connected to hear you', { error: true });
+  try {
+    await s.sendVoice(ev.detail.blob);
+    buzz(8);
+    toast(`Sent (${(ev.detail.ms / 1000).toFixed(1)} s)`, { ms: 1200 });
+  } catch {
+    toast('Could not send the message', { error: true });
+  }
+});
+
+function bindPushToTalk(btn) {
+  btn.addEventListener('contextmenu', (e) => e.preventDefault());
+  btn.addEventListener('pointerdown', (e) => {
+    e.preventDefault();
+    voicePlayer.unlock();
+    if (!ui.session?.canTalk) return toast('Nobody connected yet', { error: true });
+    btn.setPointerCapture(e.pointerId);
+    ptt.start().catch((err) => {
+      const denied = err?.name === 'NotAllowedError' || err?.name === 'SecurityError';
+      toast(denied ? 'Microphone access was denied' : 'No microphone available', { error: true });
+    });
+  });
+  const release = () => { ptt.stop(); };
+  btn.addEventListener('pointerup', release);
+  btn.addEventListener('pointercancel', release);
+  btn.addEventListener('lostpointercapture', release);
+}
+
 // ---------------------------------------------------------------- connection flows
 
 async function startPractice() {
@@ -1131,6 +1217,11 @@ function bind() {
   cutDeck.addEventListener('pointerdown', (e) => { cutDeck.setPointerCapture(e.pointerId); onCutMove(e); });
   cutDeck.addEventListener('pointermove', onCutMove);
   cutDeck.addEventListener('pointerup', onCutUp);
+
+  bindPushToTalk($('#btn-ptt'));
+  bindPushToTalk($('#btn-ptt-lobby'));
+  // Mobile browsers only play audio after a gesture: unlock on the first tap.
+  document.addEventListener('pointerdown', () => voicePlayer.unlock(), { capture: true, once: true });
 
   const hand = $('#hand');
   hand.addEventListener('pointerdown', onPointerDown);

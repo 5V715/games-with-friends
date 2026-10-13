@@ -25,6 +25,9 @@ between browsers, so game traffic never goes through a server.
      compressed into a short code you can send over any chat.
   3. **Practice** offline against bots.
 - Connection status per player (direct P2P vs. TURN relay, round-trip time).
+- Push to talk: hold 🎤 to record a short voice message (up to 15 s). It is sent
+  peer-to-peer to everyone at the table and plays right away. This needs HTTPS and
+  microphone permission.
 - Bots fill seats; a disconnected player is auto-played until they rejoin. If a
   guest reloads the page, they get their seat back.
 - Optional custom TURN server and "relay only" mode in the in-app settings.

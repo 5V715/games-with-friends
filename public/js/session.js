@@ -6,9 +6,11 @@
 //   'state'  { view }      – new state to render
 //   'error'  { message, fatal }
 //   'link'   { state, route } (guest only) – connection quality to the host
+//   'voice'  { from, blob } – a push-to-talk clip from another player
 
 import { Game, MAX_PLAYERS } from './engine.js';
 import { botStep } from './bot.js';
+import { VoiceAssembler, clipToMessages, validVoiceMessage } from './voice.js';
 
 const BOT_NAMES = ['Ada', 'Bruno', 'Clara', 'Dieter', 'Erika', 'Fritz', 'Greta', 'Hans'];
 const BOT_DELAY = 750;
@@ -35,6 +37,7 @@ export class HostSession extends EventTarget {
     this.playerToPeer = new Map();
     this.links = new Map(); // playerId -> { state, route }
     this.botTimer = null;
+    this.voice = new VoiceAssembler();
 
     if (net) {
       net.addEventListener('message', (ev) => this.#onMessage(ev.detail.peerId, ev.detail.msg));
@@ -58,6 +61,24 @@ export class HostSession extends EventTarget {
     if (msg.t === 'action') {
       const res = this.apply(pid, msg.action);
       if (!res.ok) this.net.send(peerId, { t: 'error', message: res.error });
+    } else if (msg.t === 'voice' && validVoiceMessage(msg)) {
+      // The host decides who a clip is from, then forwards it to everyone else.
+      const chunk = { ...msg, from: pid };
+      for (const [other, otherPeer] of this.playerToPeer) {
+        if (other !== pid) this.net.send(otherPeer, chunk);
+      }
+      const clip = this.voice.add(chunk);
+      if (clip) emit(this, 'voice', clip);
+    }
+  }
+
+  get canTalk() {
+    return this.playerToPeer.size > 0;
+  }
+
+  async sendVoice(blob) {
+    for (const m of await clipToMessages(blob, this.myId)) {
+      for (const peerId of this.playerToPeer.values()) this.net.send(peerId, m);
     }
   }
 
@@ -200,6 +221,7 @@ export class GuestSession extends EventTarget {
     this.net = net;
     this.view = null;
     this.ended = false;
+    this.voice = new VoiceAssembler();
 
     net.addEventListener('open', () => net.send({ t: 'join', name, clientId: this.clientId }));
     net.addEventListener('message', (ev) => this.#onMessage(ev.detail));
@@ -224,7 +246,18 @@ export class GuestSession extends EventTarget {
     } else if (msg.t === 'error') {
       if (msg.fatal) this.ended = true;
       emit(this, 'error', { message: msg.message, fatal: !!msg.fatal });
+    } else if (msg.t === 'voice') {
+      const clip = this.voice.add(msg);
+      if (clip) emit(this, 'voice', clip);
     }
+  }
+
+  get canTalk() {
+    return this.net.link?.state === 'open';
+  }
+
+  async sendVoice(blob) {
+    for (const m of await clipToMessages(blob, this.myId)) this.net.send(m);
   }
 
   act(action) {

@@ -510,6 +510,44 @@ body.dragging-cards, body.dragging-cards * { cursor: grabbing !important; }
 .actions .btn { flex: 1; }
 .actions .btn.icon { flex: 0 0 44px; }
 
+/* ---------- Push to talk ---------- */
+
+.btn.ptt {
+  touch-action: none;
+  -webkit-touch-callout: none;
+}
+.btn.ptt[hidden] { display: none; }
+.btn.ptt.recording {
+  background: var(--danger);
+  border-color: transparent;
+  color: #fff;
+  transform: scale(1.12);
+  box-shadow: 0 0 0 6px rgba(226, 87, 76, .35);
+}
+.btn.big.ptt.recording { transform: none; }
+.ptt-indicator {
+  position: fixed;
+  top: calc(12px + var(--safe-t));
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 120;
+  display: flex; align-items: center; gap: 8px;
+  background: rgba(20, 20, 24, .94);
+  color: #fff;
+  padding: 10px 16px;
+  border-radius: 999px;
+  font: 600 15px/1 system-ui, sans-serif;
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+  box-shadow: var(--shadow);
+}
+.ptt-indicator[hidden] { display: none; }
+.rec-dot { flex: 0 0 auto; width: 12px; height: 12px; border-radius: 50%; background: var(--danger); animation: blink 1s infinite; }
+@keyframes blink { 50% { opacity: .25; } }
+.opp.speaking { border-color: var(--ok); background: rgba(76, 209, 138, .18); }
+.opp.speaking .oname::after { content: ' 🔊'; }
+.player-list li.speaking { outline: 2px solid var(--ok); }
+
 /* ---------- Toast ---------- */
 
 .toast {

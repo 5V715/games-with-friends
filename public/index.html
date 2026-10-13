@@ -72,6 +72,7 @@
           <button class="btn" id="btn-add-bot">+ Add bot</button>
           <button class="btn" id="btn-manual-invite">+ Invite with code</button>
         </div>
+        <button class="btn big ptt" id="btn-ptt-lobby" aria-label="Hold to talk">🎤 Hold to talk</button>
         <button class="btn primary big host-only" id="btn-start">Start game</button>
         <p class="guest-only waiting">Waiting for the host to start…</p>
       </div>
@@ -117,10 +118,14 @@
         <button class="btn" id="btn-sort">Sort</button>
         <button class="btn primary" id="btn-meld">Meld</button>
         <button class="btn" id="btn-discard">Discard</button>
+        <button class="btn icon ptt" id="btn-ptt" aria-label="Hold to talk" title="Hold to talk">🎤</button>
       </footer>
     </section>
 
     <div class="toast" id="toast" role="status" aria-live="polite"></div>
+    <div class="ptt-indicator" id="ptt-indicator" aria-live="polite" hidden>
+      <span class="rec-dot"></span><span id="ptt-time">0s</span> · release to send
+    </div>
   </main>
 
   <!-- Round over -->
@@ -232,6 +237,8 @@
       <h3>Scoring</h3>
       <p>When someone goes out, the others score their remaining cards as penalty: joker 20, ace 11, pictures 10,
         others face value. Going out in a single turn (<b>Hand‑Rommé</b>) doubles the penalty. Lowest total wins.</p>
+      <h3>Talking</h3>
+      <p>Hold the 🎤 button and speak (up to 15 seconds); let go to send. Everyone at the table hears it right away.</p>
       <h3>Touch tips</h3>
       <p>Tap to select. Drag a card to rearrange your hand, or drag it onto a meld or the discard pile.</p>
     </div>
