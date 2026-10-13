@@ -1,6 +1,6 @@
 // UI controller: screens, rendering, touch interaction and connection flows.
 
-import { SUIT_SYMBOL, RED_SUITS, SUITS, penalty } from './cards.js';
+import { SUIT_SYMBOL, RED_SUITS } from './cards.js';
 import { analyzeMeld, layOff, swapJoker } from './rules.js';
 import { HostSession, GuestSession } from './session.js';
 import { PushToTalk, VoicePlayer, voiceSupported, VOICE_MAX_MS } from './voice.js';
@@ -40,7 +40,7 @@ const ui = {
   freshIds: new Set(),
   selected: new Set(),
   staged: [],
-  sortMode: null, // last manual sort ('suit' | 'rank'); hands are never auto-sorted
+  // Players arrange their hand themselves (drag and drop); it is never sorted.
   shownResultKey: '',
   shownCutRound: 0,
   lastCutPrompt: 0,
@@ -531,8 +531,6 @@ function renderActions() {
   $('#btn-meld').disabled = !play || sel.length < 3;
   $('#btn-meld').textContent = me()?.cameOut ? t('game.meld') : t('game.group');
   $('#btn-discard').disabled = !play || sel.length !== 1;
-  // The button shows the sort it will apply next.
-  $('#btn-sort').textContent = ui.sortMode === 'suit' ? t('game.sortRank') : t('game.sortSuit');
 }
 
 function updateSelection() {
@@ -660,20 +658,6 @@ function act(action) {
   const res = ui.session.act(action);
   if (res.ok) buzz();
   return res;
-}
-
-function sortHand(mode) {
-  const byId = handById();
-  const key = (c) => {
-    if (c.joker) return [9, 99];
-    const r = c.rank === 1 ? 14 : c.rank;
-    return mode === 'suit' ? [SUITS.indexOf(c.suit), r] : [r, SUITS.indexOf(c.suit)];
-  };
-  ui.handOrder.sort((a, b) => {
-    const ka = key(byId.get(a));
-    const kb = key(byId.get(b));
-    return ka[0] - kb[0] || ka[1] - kb[1];
-  });
 }
 
 function onCardTap(id) {
@@ -1329,12 +1313,6 @@ function bind() {
   });
   $('#btn-meld').onclick = () => stageOrMeld([...ui.selected]);
   $('#btn-discard').onclick = () => { if (ui.selected.size === 1) discardCard([...ui.selected][0]); };
-  $('#btn-sort').onclick = () => {
-    ui.sortMode = ui.sortMode === 'suit' ? 'rank' : 'suit';
-    sortHand(ui.sortMode);
-    renderHand();
-    renderActions();
-  };
   $('#btn-unstage').onclick = () => { ui.staged.pop(); render(); };
   $('#btn-laydown').onclick = () => {
     if (ui.staged.length) act({ type: 'meld', groups: ui.staged });

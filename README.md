@@ -145,6 +145,37 @@ browser. The page notices that its own server offers signaling, so you don't
 need a `SIGNALING_URL` or `?signal=` parameter. Microphone access (push to talk)
 needs HTTPS, so put the container behind a TLS proxy for use on phones.
 
+### Behind Traefik
+
+Only container port **8080** (HTTP) is needed. Traefik reaches it over the
+Docker network, so you don't publish any ports. Game traffic and voice go
+browser to browser over WebRTC and never touch the server.
+
+```yaml
+services:
+  romme:
+    image: ghcr.io/5v715/romme-signaling:latest
+    restart: unless-stopped
+    environment:
+      ALLOWED_ORIGINS: https://5v715.github.io   # only needed if the GitHub Pages copy should use this server too
+      ADMIN_TOKEN: change-me
+      ROOM_IDLE_MINUTES: "120"
+    networks: [traefik]
+    labels:
+      - traefik.enable=true
+      - traefik.docker.network=traefik
+      - traefik.http.routers.romme.rule=Host(`romme.example.com`)
+      - traefik.http.routers.romme.entrypoints=websecure
+      - traefik.http.routers.romme.tls.certresolver=letsencrypt
+      - traefik.http.services.romme.loadbalancer.server.port=8080
+networks:
+  traefik:
+    external: true
+```
+
+Run a single instance, because rooms live in memory. Signaling uses Server-Sent
+Events, which Traefik streams without extra configuration.
+
 ### About TURN
 
 STUN is enough for most home networks. Behind symmetric NATs or strict corporate
