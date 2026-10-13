@@ -340,7 +340,7 @@ function renderLobby() {
   const v = ui.view;
   $('#room-code').textContent = v.room || '—';
   $('#btn-share').hidden = !v.room;
-  $('#room-box').hidden = !v.room && !ui.session.isHost;
+  $('#room-box').hidden = !v.room;
   const list = $('#lobby-players');
   list.innerHTML = '';
   for (const p of v.players) {
@@ -864,6 +864,16 @@ async function hostOnline() {
     ui.room = room;
     const s = new HostSession({ name: playerName(), clientId, net, room });
     attach(s);
+    net.addEventListener('signalclosed', (ev) => {
+      if (ui.session !== s) return;
+      s.room = null;
+      ui.room = null;
+      history.replaceState(null, '', location.pathname + location.search.replace(/([?&])room=[^&]*&?/, '$1').replace(/[?&]$/, ''));
+      toast(ev.detail.code === 'room-expired'
+        ? 'Table code expired after inactivity. Players at the table stay connected; invite new players with a code.'
+        : 'Signaling server closed the table code. Players at the table stay connected.', { error: true, ms: 6000 });
+      s.broadcast();
+    });
     s.broadcast();
     if (room) history.replaceState(null, '', roomUrl(room));
   } catch (e) {

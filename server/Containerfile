@@ -10,7 +10,8 @@ LABEL org.opencontainers.image.title="romme-signaling" \
 ENV NODE_ENV=production \
     PORT=8080 \
     HOST=0.0.0.0 \
-    ALLOWED_ORIGINS=*
+    ALLOWED_ORIGINS=* \
+    ROOM_IDLE_MINUTES=120
 
 WORKDIR /app
 COPY package.json server.js ./

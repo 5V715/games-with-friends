@@ -170,6 +170,7 @@ export class Signaling extends EventTarget {
         if (msg.from === 'server' && msg.data.type === 'error') {
           this.close();
           if (!settled) { settled = true; reject(new Error(msg.data.code)); }
+          else this.dispatchEvent(new CustomEvent('closed', { detail: { code: msg.data.code } }));
           return;
         }
         this.dispatchEvent(new CustomEvent('message', { detail: msg }));
@@ -391,6 +392,10 @@ export class HostNet extends EventTarget {
     if (!this.config.signaling) return false;
     this.signaling = new Signaling(this.config.base, this.room, 'host', 'host');
     this.signaling.addEventListener('message', (ev) => this.#onSignal(ev.detail));
+    this.signaling.addEventListener('closed', (ev) => {
+      this.signaling = null;
+      this.dispatchEvent(new CustomEvent('signalclosed', { detail: ev.detail }));
+    });
     await this.signaling.connect();
     return true;
   }
@@ -402,7 +407,7 @@ export class HostNet extends EventTarget {
     }
     if (data.type === 'hello') {
       this.#drop(from);
-      const link = this.#makeLink(from, (d) => this.signaling.send(from, d).catch(() => {}));
+      const link = this.#makeLink(from, (d) => this.signaling?.send(from, d).catch(() => {}));
       await link.start();
       return;
     }

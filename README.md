@@ -107,9 +107,25 @@ on an `https://` page.
 | `ALLOWED_ORIGINS` | `*` | Comma-separated origins allowed by CORS, e.g. `https://you.github.io` |
 | `ICE_SERVERS` | Google STUN | JSON array of `RTCIceServer` objects sent to clients |
 | `TURN_URL`, `TURN_USERNAME`, `TURN_CREDENTIAL` | – | Adds a TURN server (e.g. coturn) to the list |
+| `ADMIN_TOKEN` | – | Enables `GET /admin/rooms`, which lists all rooms. Unset means the endpoint is off. |
+| `ROOM_IDLE_MINUTES` | `120` | Closes a room after this many minutes without signaling activity (joins, offers, ICE candidates). `0` turns it off. Games already running stay connected because they talk peer-to-peer, but new players can't join that room any more. |
 
-Endpoints: `GET /healthz`, `GET /api/ice`, `GET /api/signal` (SSE), `POST /api/signal`.
+Endpoints: `GET /healthz` (room count only), `GET /api/ice`, `GET /api/signal` (SSE),
+`POST /api/signal`, and `GET /admin/rooms` (needs `ADMIN_TOKEN`).
 Rooms are held in memory, so run a single replica.
+
+A room disappears as soon as its last player disconnects, or after
+`ROOM_IDLE_MINUTES` without activity. To list the open rooms:
+
+```sh
+curl -H "Authorization: Bearer $ADMIN_TOKEN" https://your-server.example.com/admin/rooms
+```
+
+```json
+{ "rooms": [ { "room": "K7QXP", "players": 3, "hostConnected": true,
+  "createdAt": "…", "lastActivity": "…", "ageMinutes": 12, "idleMinutes": 4,
+  "expiresInMinutes": 116 } ], "idleMinutes": 120 }
+```
 
 ### About TURN
 

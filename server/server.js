@@ -7,7 +7,8 @@
 // channel between the host and each guest. Signaling uses Server-Sent Events
 // (server → browser) and POST requests (browser → server).
 //
-//   GET  /healthz                      liveness probe
+//   GET  /healthz                      liveness probe (number of rooms only)
+//   GET  /admin/rooms                  list all rooms (needs ADMIN_TOKEN)
 //   GET  /api/ice                      ICE server list (STUN/TURN) for clients
 //   GET  /api/signal?room=&peer=&role= event stream for one peer in a room
 //   POST /api/signal                   { room, from, to, data } relay a message
@@ -19,13 +20,22 @@
 //                 https://you.github.io (default * = any origin)
 //   ICE_SERVERS   JSON array of RTCIceServer objects, replaces the defaults
 //   TURN_URL, TURN_USERNAME, TURN_CREDENTIAL   add a TURN server
+//   ADMIN_TOKEN   enables GET /admin/rooms; send it as "Authorization: Bearer
+//                 <token>" or ?token=<token>. Unset = admin endpoint disabled.
+//   ROOM_IDLE_MINUTES  close rooms without signaling activity (joins, offers,
+//                 ICE candidates) for this long (default 120, 0 = never).
+//                 Games already running are not affected: they talk directly.
 
 import http from 'node:http';
+import crypto from 'node:crypto';
 
 const PORT = Number(process.env.PORT) || 8080;
 const HOST = process.env.HOST || '0.0.0.0';
 const MAX_BODY = 64 * 1024;
 const MAX_PEERS_PER_ROOM = 8;
+const ADMIN_TOKEN = process.env.ADMIN_TOKEN || '';
+const ROOM_IDLE_MS = (process.env.ROOM_IDLE_MINUTES != null && process.env.ROOM_IDLE_MINUTES !== ''
+  ? Number(process.env.ROOM_IDLE_MINUTES) : 120) * 60000;
 const ROOM_RE = /^[A-Z0-9]{4,8}$/;
 const PEER_RE = /^[A-Za-z0-9_-]{1,32}$/;
 
@@ -60,11 +70,69 @@ function iceServers() {
   return servers;
 }
 
-// room code -> Map(peerId -> { res, role })
+// room code -> Map(peerId -> { res, role, joinedAt })
 const rooms = new Map();
+// room code -> { createdAt, lastActivity } (timestamps in ms)
+const roomInfo = new Map();
+
+function touch(room) {
+  const info = roomInfo.get(room);
+  if (info) info.lastActivity = Date.now();
+}
 
 function sendEvent(res, data) {
-  res.write(`data: ${JSON.stringify(data)}\n\n`);
+  if (!res.writableEnded) res.write(`data: ${JSON.stringify(data)}\n\n`);
+}
+
+// Closes a room: tells every peer why, then ends their streams.
+function closeRoom(room, code) {
+  const peers = rooms.get(room);
+  rooms.delete(room);
+  roomInfo.delete(room);
+  if (!peers) return;
+  for (const p of peers.values()) {
+    sendEvent(p.res, { from: 'server', data: { type: 'error', code } });
+    p.res.end();
+  }
+  peers.clear();
+}
+
+function sweepIdleRooms() {
+  if (!(ROOM_IDLE_MS > 0)) return;
+  const now = Date.now();
+  for (const [room, info] of roomInfo) {
+    if (now - info.lastActivity > ROOM_IDLE_MS) {
+      console.log(`room ${room} closed after ${Math.round((now - info.lastActivity) / 60000)} min without activity`);
+      closeRoom(room, 'room-expired');
+    }
+  }
+}
+if (ROOM_IDLE_MS > 0) setInterval(sweepIdleRooms, Math.min(60000, Math.max(1000, ROOM_IDLE_MS / 4))).unref();
+
+function adminAuthorized(req, url) {
+  if (!ADMIN_TOKEN) return false;
+  const header = req.headers.authorization || '';
+  const given = header.startsWith('Bearer ') ? header.slice(7) : (url.searchParams.get('token') || '');
+  const a = crypto.createHash('sha256').update(given).digest();
+  const b = crypto.createHash('sha256').update(ADMIN_TOKEN).digest();
+  return crypto.timingSafeEqual(a, b);
+}
+
+function listRooms() {
+  const now = Date.now();
+  return [...rooms].map(([room, peers]) => {
+    const info = roomInfo.get(room) || { createdAt: now, lastActivity: now };
+    return {
+      room,
+      players: peers.size,
+      hostConnected: [...peers.values()].some(p => p.role === 'host'),
+      createdAt: new Date(info.createdAt).toISOString(),
+      lastActivity: new Date(info.lastActivity).toISOString(),
+      ageMinutes: Math.round((now - info.createdAt) / 60000),
+      idleMinutes: Math.round((now - info.lastActivity) / 60000),
+      expiresInMinutes: ROOM_IDLE_MS > 0 ? Math.max(0, Math.round((info.lastActivity + ROOM_IDLE_MS - now) / 60000)) : null,
+    };
+  }).sort((x, y) => (x.lastActivity < y.lastActivity ? 1 : -1));
 }
 
 function json(res, status, body) {
@@ -96,16 +164,20 @@ function openStream(req, res, url) {
     sendEvent(res, { from: 'server', data: { type: 'error', code: 'no-host' } });
     return res.end();
   }
-  if (!peers) rooms.set(room, (peers = new Map()));
+  if (!peers) {
+    rooms.set(room, (peers = new Map()));
+    roomInfo.set(room, { createdAt: Date.now(), lastActivity: Date.now() });
+  }
   if (peers.size >= MAX_PEERS_PER_ROOM && !peers.has(peer)) {
     sendEvent(res, { from: 'server', data: { type: 'error', code: 'room-full' } });
     return res.end();
   }
   peers.get(peer)?.res.end();
-  peers.set(peer, { res, role });
+  peers.set(peer, { res, role, joinedAt: Date.now() });
+  touch(room);
   sendEvent(res, { from: 'server', data: { type: 'ready' } });
 
-  const keepAlive = setInterval(() => res.write(': ping\n\n'), 20000);
+  const keepAlive = setInterval(() => { if (!res.writableEnded) res.write(': ping\n\n'); }, 20000);
   req.on('close', () => {
     clearInterval(keepAlive);
     if (peers.get(peer)?.res !== res) return;
@@ -113,7 +185,10 @@ function openStream(req, res, url) {
     for (const [, other] of peers) {
       sendEvent(other.res, { from: 'server', data: { type: role === 'host' ? 'host-left' : 'peer-left', peer } });
     }
-    if (!peers.size) rooms.delete(room);
+    if (!peers.size) {
+      rooms.delete(room);
+      roomInfo.delete(room);
+    }
   });
 }
 
@@ -138,12 +213,18 @@ async function relay(req, res) {
   if (to === 'host') target = [...peers.values()].find(p => p.role === 'host');
   if (!target) return json(res, 404, { error: 'peer not found' });
   sendEvent(target.res, { from, data });
+  touch(room);
   json(res, 200, { ok: true });
 }
 
 const server = http.createServer((req, res) => {
   const url = new URL(req.url, 'http://localhost');
   if (url.pathname === '/healthz') return json(res, 200, { ok: true, rooms: rooms.size });
+  if (url.pathname === '/admin/rooms' && req.method === 'GET') {
+    if (!ADMIN_TOKEN) return json(res, 404, { error: 'not found' });
+    if (!adminAuthorized(req, url)) return json(res, 401, { error: 'unauthorized' });
+    return json(res, 200, { rooms: listRooms(), idleMinutes: ROOM_IDLE_MS > 0 ? ROOM_IDLE_MS / 60000 : null });
+  }
   if (!cors(req, res)) return json(res, 403, { error: 'origin not allowed' });
   if (req.method === 'OPTIONS') {
     res.writeHead(204, {
@@ -161,11 +242,12 @@ const server = http.createServer((req, res) => {
 });
 
 server.listen(PORT, HOST, () => {
-  console.log(`Rommé signaling server on http://${HOST}:${PORT} (allowed origins: ${ALLOWED_ORIGINS.join(', ')})`);
+  console.log(`Rommé signaling server on http://${HOST}:${PORT} (allowed origins: ${ALLOWED_ORIGINS.join(', ')}; ` +
+    `room idle timeout: ${ROOM_IDLE_MS > 0 ? ROOM_IDLE_MS / 60000 + ' min' : 'off'}; admin: ${ADMIN_TOKEN ? 'on' : 'off'})`);
 });
 
 function shutdown() {
-  for (const peers of rooms.values()) for (const p of peers.values()) p.res.end();
+  for (const room of [...rooms.keys()]) closeRoom(room, 'server-restart');
   server.close(() => process.exit(0));
   setTimeout(() => process.exit(0), 3000).unref();
 }
