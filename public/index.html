@@ -98,6 +98,7 @@
         </button>
         <button class="pile discard" id="discard" data-drop="discard" aria-label="Discard pile" data-i18n-aria="game.discardPile"></button>
         <div class="status" id="status"></div>
+        <button class="btn small primary pulse" id="btn-round-open" hidden></button>
       </div>
 
       <div class="staging" id="staging" data-drop="stage" hidden>
@@ -131,12 +132,34 @@
   <!-- Round over -->
   <dialog id="dlg-round" class="sheet">
     <h2 id="round-title" data-i18n="round.title">Round over</h2>
-    <table class="scores" id="round-scores"></table>
-    <div class="dlg-actions">
-      <button class="btn" data-close data-i18n="round.showTable">Show table</button>
-      <button class="btn primary host-only" id="btn-next-round" data-i18n="round.next">Next round</button>
-      <p class="guest-only waiting" data-i18n="round.waiting">Waiting for the host…</p>
+    <p class="round-sub" id="round-sub" hidden></p>
+    <div class="sheet-wrap"><table class="scores" id="round-scores"></table></div>
+    <div id="vote-box">
+      <h3 class="vote-question" data-i18n="vote.question">Play another round?</h3>
+      <ul class="vote-list" id="vote-list"></ul>
+      <div class="dlg-actions">
+        <button class="btn" id="btn-vote-no" data-i18n="vote.no">No, stop</button>
+        <button class="btn primary" id="btn-vote-yes" data-i18n="vote.yes">Yes, play again</button>
+      </div>
+      <p class="hint" data-i18n="vote.rule">The majority decides; a tie means another round.</p>
     </div>
+    <div id="over-box" hidden>
+      <div class="dlg-actions">
+        <button class="btn" id="btn-over-leave" data-i18n="over.leave">Leave</button>
+        <button class="btn primary host-only" id="btn-new-game" data-i18n="over.newGame">New game</button>
+      </div>
+      <p class="hint guest-only" data-i18n="over.waitHost">The host can start a new game.</p>
+    </div>
+    <div class="dlg-actions">
+      <button class="btn ghost" data-close data-i18n="round.showTable">Show table</button>
+    </div>
+  </dialog>
+
+  <!-- Score sheet: every round -->
+  <dialog id="dlg-sheet" class="sheet">
+    <h2 data-i18n="sheet.title">Score sheet</h2>
+    <div class="sheet-wrap"><table class="scores sheet-table" id="sheet-table"></table></div>
+    <div class="dlg-actions"><button class="btn primary" data-close data-i18n="menu.back">Back to game</button></div>
   </dialog>
 
   <!-- Cut result (only the cutter) -->
@@ -153,6 +176,7 @@
     <table class="scores" id="menu-scores"></table>
     <div class="menu-conn" id="menu-conn"></div>
     <div class="dlg-actions column">
+      <button class="btn" id="btn-menu-sheet" data-i18n="sheet.open">Score sheet</button>
       <button class="btn" data-open="dlg-rules" data-i18n="home.howTo">How to play</button>
       <button class="btn danger" id="btn-quit" data-i18n="menu.leave">Leave game</button>
       <button class="btn primary" data-close data-i18n="menu.back">Back to game</button>

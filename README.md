@@ -16,7 +16,7 @@ between browsers, so game traffic never goes through a server.
   discard pile. Large touch targets, haptics, safe-area aware, installable (PWA manifest).
 - Full Rommé rules: 110 cards (2 decks + 6 jokers), sets and runs, ace low/high,
   40-point first meld, laying off, joker swapping, Hand-Rommé (double penalty),
-  multi-round scoring.
+  voting on another round, and a score sheet.
 - Host-authoritative networking: the host's browser runs the game and sends each
   player only their own hand.
 - Three ways to play:
@@ -157,10 +157,13 @@ optionally **meld**, then **discard**.
   can take from the discard pile, lay cards off on any meld, and swap a joker for the
   real card it represents if you hold it.
 - You can't throw back the card you just picked up from the discard pile.
-- The first player with no cards left wins the round. Everyone else scores the
-  cards still in their hand as penalty points: joker 20, ace 11, face cards 10,
-  others face value. These double if the winner went out in a single turn
-  (**Hand-Rommé**). The lowest total score wins.
+- Whoever goes out first scores 0. Everyone else scores the cards still in their
+  hand: numbers their face value, pictures 10, ace 11, joker 20. If someone goes out
+  in a single turn while nobody was out yet, that's a **Hand** and all points of the
+  round count double.
+- After each round everybody votes on another round. The majority decides, and a tie
+  means play on. The score sheet (📊) shows every round. When the game ends, the
+  lowest total wins.
 
 ## Limitations
 

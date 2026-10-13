@@ -69,6 +69,7 @@ const STRINGS = {
     'err.gameStartedJoin': 'This game has already started',
     'err.seatTaken': 'Seat is taken',
     'err.removed': 'The host removed you from the table',
+    'err.noVote': 'There is nothing to vote on right now',
     // ---- game log
     'log.roundCut': 'Round {round} — {name} cuts the deck',
     'log.cut': (p) => (p.kept ? `${p.name} cut and kept ${plural(p.kept, 'a joker', `${p.kept} jokers`)}!` : `${p.name} cut — no joker.`) + ` ${p.starter} starts`,
@@ -80,7 +81,8 @@ const STRINGS = {
     'log.added': '{name} added {cards}',
     'log.swapped': '{name} swapped {card} for a joker',
     'log.discarded': '{name} discarded {card}',
-    'log.won': (p) => `${p.name} wins round ${p.round}${p.handRomme ? ' with Hand‑Rommé!' : '!'}`,
+    'log.won': (p) => `${p.name} wins round ${p.round}${p.handRomme ? ' — Hand! Points ×2' : '!'}`,
+    'log.gameOver': 'Game over — {names} wins with {points} points',
 
     // ---- home
     'home.tagline': 'Play rummy with friends — browser to browser, no account needed.',
@@ -160,10 +162,28 @@ const STRINGS = {
     'round.title': 'Round over',
     'round.youWin': 'You win round {round}',
     'round.otherWins': '{name} wins round {round}',
-    'round.handRomme': ' — Hand‑Rommé! ×2',
+    'round.hand': ' — Hand! Points ×2',
     'round.showTable': 'Show table',
-    'round.next': 'Next round',
-    'round.waiting': 'Waiting for the host…',
+    'round.open': 'Result & vote',
+    'vote.question': 'Play another round?',
+    'vote.yes': 'Yes, play again',
+    'vote.no': 'No, stop',
+    'vote.again': 'again',
+    'vote.stop': 'stop',
+    'vote.pending': 'deciding…',
+    'vote.rule': 'The majority decides; a tie means another round.',
+    'over.title': 'Game over',
+    'over.winner': '{names} wins with {points} points',
+    'over.newGame': 'New game',
+    'over.leave': 'Leave',
+    'over.waitHost': 'The host can start a new game.',
+    'over.open': 'Final score',
+    'game.statusGameOver': 'Game over',
+    'sheet.title': 'Score sheet',
+    'sheet.open': 'Score sheet',
+    'sheet.round': 'Round',
+    'sheet.total': 'Total',
+    'sheet.hand': 'Hand ×2',
     'scores.player': 'Player',
     'scores.round': 'Round',
     'scores.total': 'Total',
@@ -273,7 +293,10 @@ const STRINGS = {
       <h3>Coming out</h3>
       <p>Your first meld must be worth at least <b>40 points</b> (2–9 face value, 10/J/Q/K = 10, ace = 11 or 1 in A‑2‑3). Stage several groups and tap <i>Lay down</i>. Once you are out — and only on your turn — you may take from the discard pile, add cards to any meld on the table (select cards, tap the meld) and swap a joker for the card it stands for if you hold that card.</p>
       <h3>Scoring</h3>
-      <p>When someone goes out, the others score their remaining cards as penalty: joker 20, ace 11, pictures 10, others face value. Going out in a single turn (<b>Hand‑Rommé</b>) doubles the penalty. Lowest total wins.</p>
+      <p>Whoever goes out scores 0. Everyone else scores the cards left in their hand: numbers their face value, pictures (J, Q, K) 10, ace 11, joker 20.
+        If someone goes out in a single turn while nobody was out yet, that is a <b>Hand</b>: all points of that round count double.</p>
+      <h3>Another round?</h3>
+      <p>After each round everybody votes whether to play on. The majority decides; a tie means another round. The score sheet (📊) shows every round. When you stop, the lowest total wins.</p>
       <h3>Talking</h3>
       <p>Hold the 🎤 button and speak (up to 15 seconds); let go to send. Everyone at the table hears it right away.</p>
       <h3>Touch tips</h3>
@@ -315,6 +338,7 @@ const STRINGS = {
     'err.gameStartedJoin': 'Dieses Spiel hat schon begonnen',
     'err.seatTaken': 'Der Platz ist schon besetzt',
     'err.removed': 'Der Gastgeber hat dich vom Tisch entfernt',
+    'err.noVote': 'Gerade gibt es nichts abzustimmen',
     'log.roundCut': 'Runde {round} — {name} hebt ab',
     'log.cut': (p) => (p.kept ? `${p.name} hat abgehoben und ${plural(p.kept, 'einen Joker', `${p.kept} Joker`)} behalten!` : `${p.name} hat abgehoben — kein Joker.`) + ` ${p.starter} beginnt`,
     'log.tookDiscard': '{name} hat {card} vom Ablagestapel genommen',
@@ -325,7 +349,8 @@ const STRINGS = {
     'log.added': '{name} hat {cards} angelegt',
     'log.swapped': '{name} hat {card} gegen einen Joker getauscht',
     'log.discarded': '{name} hat {card} abgelegt',
-    'log.won': (p) => `${p.name} gewinnt Runde ${p.round}${p.handRomme ? ' mit Hand‑Rommé!' : '!'}`,
+    'log.won': (p) => `${p.name} gewinnt Runde ${p.round}${p.handRomme ? ' — Hand! Punkte ×2' : '!'}`,
+    'log.gameOver': 'Spiel vorbei — {names} gewinnt mit {points} Punkten',
 
     'home.tagline': 'Rommé mit Freunden — direkt von Browser zu Browser, ohne Konto.',
     'home.name': 'Dein Name',
@@ -399,10 +424,28 @@ const STRINGS = {
     'round.title': 'Runde vorbei',
     'round.youWin': 'Du gewinnst Runde {round}',
     'round.otherWins': '{name} gewinnt Runde {round}',
-    'round.handRomme': ' — Hand‑Rommé! ×2',
+    'round.hand': ' — Hand! Punkte ×2',
     'round.showTable': 'Tisch zeigen',
-    'round.next': 'Nächste Runde',
-    'round.waiting': 'Warte auf den Gastgeber…',
+    'round.open': 'Ergebnis & Abstimmung',
+    'vote.question': 'Noch eine Runde?',
+    'vote.yes': 'Ja, nochmal',
+    'vote.no': 'Nein, aufhören',
+    'vote.again': 'nochmal',
+    'vote.stop': 'aufhören',
+    'vote.pending': 'überlegt…',
+    'vote.rule': 'Die Mehrheit entscheidet, bei Gleichstand wird weitergespielt.',
+    'over.title': 'Spiel vorbei',
+    'over.winner': '{names} gewinnt mit {points} Punkten',
+    'over.newGame': 'Neues Spiel',
+    'over.leave': 'Verlassen',
+    'over.waitHost': 'Der Gastgeber kann ein neues Spiel starten.',
+    'over.open': 'Endstand',
+    'game.statusGameOver': 'Spiel vorbei',
+    'sheet.title': 'Punktestand',
+    'sheet.open': 'Punktestand',
+    'sheet.round': 'Runde',
+    'sheet.total': 'Summe',
+    'sheet.hand': 'Hand ×2',
     'scores.player': 'Spieler',
     'scores.round': 'Runde',
     'scores.total': 'Gesamt',
@@ -506,7 +549,10 @@ const STRINGS = {
       <h3>Rauskommen</h3>
       <p>Deine erste Auslage muss mindestens <b>40 Punkte</b> wert sein (2–9 nach Augen, 10/B/D/K = 10, Ass = 11 bzw. 1 in A‑2‑3). Stelle mehrere Gruppen zusammen und tippe <i>Auslegen</i>. Bist du draußen — und nur wenn du dran bist —, darfst du vom Ablagestapel ziehen, Karten an jede Auslage anlegen (Karten wählen, Auslage antippen) und einen Joker gegen die Karte tauschen, für die er steht, wenn du sie hast.</p>
       <h3>Wertung</h3>
-      <p>Geht jemand raus, zählen die anderen ihre Restkarten als Minuspunkte: Joker 20, Ass 11, Bilder 10, sonst der Kartenwert. Wer in einem Zug rausgeht (<b>Hand‑Rommé</b>), verdoppelt die Minuspunkte. Am Ende gewinnt die niedrigste Summe.</p>
+      <p>Wer rausgeht, bekommt 0 Punkte. Alle anderen zählen die Karten, die sie noch auf der Hand haben: Zahlen ihren Eigenwert, Bilder (B, D, K) 10, Ass 11, Joker 20.
+        Beendet jemand die Runde in einem einzigen Zug, ohne dass schon jemand draußen war, ist das eine <b>Hand</b>: Alle Punkte dieser Runde zählen doppelt.</p>
+      <h3>Noch eine Runde?</h3>
+      <p>Nach jeder Runde stimmen alle ab, ob weitergespielt wird. Die Mehrheit entscheidet, bei Gleichstand geht es weiter. Der Punktestand (📊) zeigt alle Runden. Hört ihr auf, gewinnt die niedrigste Summe.</p>
       <h3>Sprechen</h3>
       <p>Halte den 🎤-Knopf gedrückt und sprich (bis zu 15 Sekunden); loslassen sendet. Alle am Tisch hören es sofort.</p>
       <h3>Tipps</h3>

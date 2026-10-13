@@ -99,6 +99,7 @@ export function botStep(view) {
   const hand = view.hand;
 
   if (view.phase === 'cut') return { type: 'cut', at: Math.random() };
+  if (view.phase === 'roundOver') return { type: 'vote', yes: true };
 
   if (view.phase === 'draw') {
     const top = view.discardTop;

@@ -143,3 +143,71 @@ test('a joker at the cut point goes to the cutter', () => {
   assert.ok(g.cutter.hand.some(c => c.id === jokerId));
   assert.ok(g.cutResult.kept.includes(jokerId));
 });
+
+// Helper: a 3-player game after the cut, with the current player about to go
+// out by melding everything (7-8-9-10♥ = 34 + K♠ K♥ K♦ = 30 → 64 points).
+function goingOut() {
+  const g = newGame(3);
+  const p = g.current;
+  const c = (id, suit, rank) => ({ id, suit, rank, joker: false });
+  p.hand = [c('a', 'H', 7), c('b', 'H', 8), c('c', 'H', 9), c('d', 'H', 10), c('e', 'S', 13), c('f', 'H', 13), c('g', 'D', 13)];
+  g.phase = 'play';
+  return g;
+}
+const outMove = { type: 'meld', groups: [['a', 'b', 'c', 'd'], ['e', 'f', 'g']] };
+const handPenalty = (pl) => pl.hand.reduce((s, x) => s + (x.joker ? 20 : x.rank === 1 ? 11 : x.rank >= 10 ? 10 : x.rank), 0);
+
+test('winner scores 0, others their cards; "Hand" doubles only if nobody was out', () => {
+  const g = goingOut();
+  const p = g.current;
+  const others = g.players.filter(x => x !== p);
+  const expected = others.map(handPenalty);
+  assert.ok(g.apply(p.id, outMove).ok);
+  assert.equal(g.phase, 'roundOver');
+  assert.equal(g.result.handRomme, true);
+  assert.equal(g.result.penalties[p.id], 0);
+  others.forEach((o, i) => assert.equal(g.result.penalties[o.id], expected[i] * 2));
+
+  const g2 = goingOut();
+  const p2 = g2.current;
+  const other = g2.players.find(x => x !== p2);
+  other.cameOut = true; // someone else is already out → no Hand
+  const exp2 = handPenalty(other);
+  assert.ok(g2.apply(p2.id, outMove).ok);
+  assert.equal(g2.result.handRomme, false);
+  assert.equal(g2.result.penalties[other.id], exp2);
+});
+
+test('voting: majority decides, a tie plays on, then game over', () => {
+  const g = goingOut();
+  const [a, b, c] = g.players;
+  g.apply(g.current.id, outMove);
+  assert.equal(g.history.length, 1);
+  assert.equal(g.apply(a.id, { type: 'cut', at: 0.5 }).ok, false);
+  assert.ok(g.apply(a.id, { type: 'vote', yes: false }).ok);
+  assert.ok(g.apply(b.id, { type: 'vote', yes: true }).ok);
+  assert.equal(g.phase, 'roundOver', 'waits for everyone');
+  assert.ok(g.apply(b.id, { type: 'vote', yes: false }).ok, 'votes can be changed');
+  assert.ok(g.apply(c.id, { type: 'vote', yes: true }).ok);
+  assert.equal(g.phase, 'gameOver', '2 of 3 want to stop');
+  assert.equal(g.log.at(-1).key, 'log.gameOver');
+  assert.equal(g.apply(a.id, { type: 'vote', yes: true }).ok, false);
+
+  const g2 = newGame(2);
+  const [x, y] = g2.players;
+  g2.phase = 'roundOver';
+  g2.votes = {};
+  g2.apply(x.id, { type: 'vote', yes: true });
+  g2.apply(y.id, { type: 'vote', yes: false });
+  assert.equal(g2.phase, 'cut', 'tie → next round');
+  assert.equal(g2.round, 2);
+});
+
+test('bots vote to play on', () => {
+  const g = goingOut();
+  g.apply(g.current.id, outMove);
+  for (const p of g.players) {
+    const action = botStep(g.view(p.id));
+    assert.deepEqual(action, { type: 'vote', yes: true });
+  }
+});

@@ -41,7 +41,7 @@ const ui = {
   selected: new Set(),
   staged: [],
   sortMode: null, // last manual sort ('suit' | 'rank'); hands are never auto-sorted
-  shownResultRound: 0,
+  shownResultKey: '',
   shownCutRound: 0,
   lastCutPrompt: 0,
   lastTurn: null,
@@ -163,7 +163,7 @@ function attach(session) {
   ui.knownIds = new Set();
   ui.selected.clear();
   ui.staged = [];
-  ui.shownResultRound = 0;
+  ui.shownResultKey = '';
   ui.shownCutRound = 0;
   ui.lastCutPrompt = 0;
   ui.knownMelds = new Set();
@@ -398,6 +398,15 @@ function renderOpponents() {
       <span class="link-dot ${p.id === v.you && !ui.session.isHost ? linkDotClass() : dotClass(p)}"></span>`;
     box.append(el);
   }
+  if (v.history?.length) {
+    const b = document.createElement('button');
+    b.className = 'btn icon sheet-btn';
+    b.id = 'btn-sheet';
+    b.textContent = '📊';
+    b.title = t('sheet.open');
+    b.setAttribute('aria-label', t('sheet.open'));
+    box.append(b);
+  }
   box.querySelector('.turn')?.scrollIntoView({ inline: 'nearest', block: 'nearest' });
 }
 
@@ -452,6 +461,7 @@ function renderPiles() {
   let main;
   if (v.phase === 'cut') main = v.cutter === v.you ? t('game.statusCut') : t('game.statusCutting');
   else if (v.phase === 'roundOver') main = t('game.statusRoundOver');
+  else if (v.phase === 'gameOver') main = t('game.statusGameOver');
   else if (myTurn()) main = v.phase === 'draw' ? t('game.statusDraw') : t('game.statusPlay');
   else main = t('game.statusOther', { name: cur?.name || '…' });
   status.className = 'status' + (myTurn() ? ' your-turn' : '');
@@ -563,19 +573,83 @@ function renderScoresTable(table, { withHands }) {
   }
 }
 
+// Every finished round as a table: one row per round, one column per player.
+function renderSheet(table) {
+  const v = ui.view;
+  const players = v.players;
+  const head = players.map(p => `<th class="num">${esc(p.id === v.you ? t('game.you') : p.name)}</th>`).join('');
+  let html = `<tr><th>${t('sheet.round')}</th>${head}</tr>`;
+  for (const h of v.history) {
+    const cells = players.map(p => {
+      const pts = h.penalties[p.id] ?? 0;
+      return `<td class="num${p.id === h.winner ? ' won' : ''}">${p.id === h.winner ? '🏆 0' : pts}</td>`;
+    }).join('');
+    html += `<tr><td>${h.round}${h.handRomme ? ` <span class="chip warn">${t('sheet.hand')}</span>` : ''}</td>${cells}</tr>`;
+  }
+  const best = Math.min(...players.map(p => p.score));
+  const totals = players.map(p => `<td class="num${p.score === best ? ' best' : ''}">${p.score}</td>`).join('');
+  html += `<tr class="total"><td>${t('sheet.total')}</td>${totals}</tr>`;
+  table.innerHTML = html;
+}
+
+function openSheet() {
+  if (!ui.view) return;
+  renderSheet($('#sheet-table'));
+  openDialog('dlg-sheet');
+}
+
+function renderVotes() {
+  const v = ui.view;
+  const list = $('#vote-list');
+  list.innerHTML = '';
+  for (const p of v.players) {
+    const li = document.createElement('li');
+    const vote = v.votes?.[p.id];
+    const chip = vote === true ? `<span class="chip ok">✓ ${t('vote.again')}</span>`
+      : vote === false ? `<span class="chip bad">✗ ${t('vote.stop')}</span>`
+        : `<span class="chip">${t('vote.pending')}</span>`;
+    li.innerHTML = `<span>${esc(p.id === v.you ? t('game.you') : p.name)}</span>${chip}`;
+    list.append(li);
+  }
+  const mine = v.votes?.[v.you];
+  $('#btn-vote-yes').classList.toggle('chosen', mine === true);
+  $('#btn-vote-no').classList.toggle('chosen', mine === false);
+}
+
 function renderRoundOver() {
   const v = ui.view;
-  if (v.phase !== 'roundOver') {
+  const over = v.phase === 'gameOver';
+  const open = $('#btn-round-open');
+  open.hidden = v.phase !== 'roundOver' && !over;
+  open.textContent = over ? t('over.open') : t('round.open');
+  if (v.phase !== 'roundOver' && !over) {
     closeDialog('dlg-round');
     return;
   }
-  if (ui.shownResultRound === v.round) return;
-  ui.shownResultRound = v.round;
-  const winner = v.players.find(p => p.id === v.result.winner);
-  const who = winner.id === v.you ? t('round.youWin', { round: v.round }) : t('round.otherWins', { name: winner.name, round: v.round });
-  $('#round-title').textContent = who + (v.result.handRomme ? t('round.handRomme') : '!');
-  renderScoresTable($('#round-scores'), { withHands: true });
-  if (winner.id === v.you) buzz([40, 60, 40]);
+  const sub = $('#round-sub');
+  if (over) {
+    const best = Math.min(...v.players.map(p => p.score));
+    const names = v.players.filter(p => p.score === best).map(p => (p.id === v.you ? t('game.you') : p.name)).join(', ');
+    $('#round-title').textContent = t('over.title');
+    sub.textContent = '🏆 ' + t('over.winner', { names, points: best });
+    sub.hidden = false;
+    renderSheet($('#round-scores'));
+  } else {
+    const winner = v.players.find(p => p.id === v.result.winner);
+    const who = winner.id === v.you ? t('round.youWin', { round: v.round }) : t('round.otherWins', { name: winner.name, round: v.round });
+    $('#round-title').textContent = who + (v.result.handRomme ? t('round.hand') : '!');
+    sub.hidden = true;
+    renderScoresTable($('#round-scores'), { withHands: true });
+    renderVotes();
+  }
+  $('#vote-box').hidden = over;
+  $('#over-box').hidden = !over;
+
+  // Open the dialog once per finished round and once when the game ends.
+  const key = `${v.gameNo}:${v.round}:${v.phase}`;
+  if (ui.shownResultKey === key) return;
+  ui.shownResultKey = key;
+  if (!over && v.result.winner === v.you) buzz([40, 60, 40]);
   setTimeout(() => openDialog('dlg-round'), 500);
 }
 
@@ -769,7 +843,7 @@ function onPointerDown(ev) {
   Object.assign(drag, { pointerId: ev.pointerId, start: { x: ev.clientX, y: ev.clientY }, id: card.dataset.id, el: card, active: false });
   card.classList.add('pressed');
   // Capture on the hand: the card element itself leaves the DOM while dragging.
-  $('#hand').setPointerCapture(ev.pointerId);
+  capture($('#hand'), ev.pointerId);
 }
 
 function onPointerMove(ev) {
@@ -901,13 +975,18 @@ ptt.addEventListener('clip', async (ev) => {
   }
 });
 
+// setPointerCapture throws if the browser no longer tracks the pointer.
+function capture(el, pointerId) {
+  try { el.setPointerCapture(pointerId); } catch { /* pointer already gone */ }
+}
+
 function bindPushToTalk(btn) {
   btn.addEventListener('contextmenu', (e) => e.preventDefault());
   btn.addEventListener('pointerdown', (e) => {
     e.preventDefault();
     voicePlayer.unlock();
     if (!ui.session?.canTalk) return toast(t('ptt.nobodyYet'), { error: true });
-    btn.setPointerCapture(e.pointerId);
+    capture(btn, e.pointerId);
     ptt.start().catch((err) => {
       const denied = err?.name === 'NotAllowedError' || err?.name === 'SecurityError';
       toast(denied ? t('ptt.denied') : t('ptt.noMic'), { error: true });
@@ -1225,10 +1304,16 @@ function bind() {
   };
   $('#btn-menu').onclick = openMenu;
   $('#btn-quit').onclick = () => { if (confirm(t('menu.leaveConfirm'))) leave(); };
-  $('#btn-next-round').onclick = () => { closeDialog('dlg-round'); ui.session?.act({ type: 'nextRound' }); };
+  $('#btn-vote-yes').onclick = () => act({ type: 'vote', yes: true });
+  $('#btn-vote-no').onclick = () => act({ type: 'vote', yes: false });
+  $('#btn-new-game').onclick = () => { closeDialog('dlg-round'); act({ type: 'newGame' }); };
+  $('#btn-over-leave').onclick = leave;
+  $('#btn-round-open').onclick = () => openDialog('dlg-round');
+  $('#btn-menu-sheet').onclick = () => { closeDialog('dlg-menu'); openSheet(); };
+  $('#opponents').addEventListener('click', (e) => { if (e.target.closest('#btn-sheet')) openSheet(); });
 
   const cutDeck = $('#cut-deck');
-  cutDeck.addEventListener('pointerdown', (e) => { cutDeck.setPointerCapture(e.pointerId); onCutMove(e); });
+  cutDeck.addEventListener('pointerdown', (e) => { capture(cutDeck, e.pointerId); onCutMove(e); });
   cutDeck.addEventListener('pointermove', onCutMove);
   cutDeck.addEventListener('pointerup', onCutUp);
 

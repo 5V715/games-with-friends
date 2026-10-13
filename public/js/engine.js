@@ -9,7 +9,11 @@
 // meld / lay off / swap jokers → discard one card. A player's first meld must
 // be worth at least 40 points; laying off and joker swaps need you to be out. The round ends when a player has no cards left; everyone else
 // scores penalty points for the cards still in their hand (doubled when the
-// winner went out in one go — "Hand‑Rommé").
+// winner went out in one go while nobody else was out — "Hand").
+//
+// After a round everyone votes whether to play another one; the majority
+// decides (a tie means play on). Otherwise the game is over and the lowest
+// total score wins.
 
 import { createDeck, shuffle, penalty } from './cards.js';
 import { analyzeMeld, layOff, swapJoker, MIN_INITIAL_MELD } from './rules.js';
@@ -46,6 +50,9 @@ export class Game {
     this.turnNo = 0;
     this.drawnFromDiscard = null;
     this.result = null;
+    this.gameNo = 0;
+    this.history = []; // one entry per finished round: { round, winner, handRomme, penalties }
+    this.votes = {}; // playerId -> true (play again) / false (stop)
     this.log = [];
     this.nextMeldId = 1;
   }
@@ -84,16 +91,24 @@ export class Game {
     return null;
   }
 
+  // Players who still have to vote on another round.
+  get pendingVoters() {
+    return this.phase === 'roundOver' ? this.players.filter(p => !(p.id in this.votes)) : [];
+  }
+
   start() {
     if (this.players.length < MIN_PLAYERS) fail('err.minPlayers', { n: MIN_PLAYERS });
     this.round = 0;
     this.dealer = Math.floor(Math.random() * this.players.length);
     for (const p of this.players) p.score = 0;
+    this.history = [];
+    this.gameNo++;
     this.startRound();
   }
 
   startRound() {
     this.round++;
+    this.votes = {};
     this.dealer = (this.dealer + 1) % this.players.length;
     for (const p of this.players) {
       p.hand = [];
@@ -156,9 +171,10 @@ export class Game {
   #apply(playerId, action) {
     const p = this.player(playerId);
     if (!p) fail('err.unknownPlayer');
-    if (action.type === 'nextRound') {
-      if (this.phase !== 'roundOver') fail('err.roundRunning');
-      this.startRound();
+    if (action.type === 'vote') {
+      if (this.phase !== 'roundOver') fail('err.noVote');
+      this.votes[p.id] = !!action.yes;
+      this.#resolveVote();
       return;
     }
     if (action.type === 'cut') {
@@ -301,9 +317,24 @@ export class Game {
     this.drawnFromDiscard = null;
   }
 
+  #resolveVote() {
+    if (this.pendingVoters.length) return;
+    const yes = Object.values(this.votes).filter(Boolean).length;
+    const no = Object.values(this.votes).length - yes;
+    if (yes >= no) {
+      this.startRound();
+      return;
+    }
+    this.phase = 'gameOver';
+    const best = Math.min(...this.players.map(p => p.score));
+    const winners = this.players.filter(p => p.score === best).map(p => p.name);
+    this.say('log.gameOver', { names: winners.join(', '), points: best });
+  }
+
   #checkOut(p) {
     if (p.hand.length) return false;
-    const handRomme = p.cameOutTurn === this.turnNo;
+    // "Hand": the winner went out in this one turn and nobody else was out.
+    const handRomme = p.cameOutTurn === this.turnNo && this.players.every(o => o === p || !o.cameOut);
     const penalties = {};
     const hands = {};
     for (const o of this.players) {
@@ -314,6 +345,8 @@ export class Game {
       o.score += pts;
     }
     this.result = { winner: p.id, handRomme, penalties, hands };
+    this.history.push({ round: this.round, winner: p.id, handRomme, penalties });
+    this.votes = {};
     this.phase = 'roundOver';
     this.say('log.won', { name: p.name, round: this.round, handRomme });
     return true;
@@ -342,6 +375,9 @@ export class Game {
       drawnFromDiscard: this.current?.id === playerId ? this.drawnFromDiscard : null,
       minInitial: MIN_INITIAL_MELD,
       result: this.result,
+      history: this.history,
+      gameNo: this.gameNo,
+      votes: this.votes,
       log: this.log.slice(-6),
     };
   }

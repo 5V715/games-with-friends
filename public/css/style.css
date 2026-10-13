@@ -290,7 +290,7 @@ body.is-host .guest-only { display: none !important; }
 .card {
   position: relative;
   width: var(--cw);
-  height: var(--ch);
+  height: calc(var(--cw) * 1.42);
   border-radius: calc(var(--cw) * .1);
   background: var(--card);
   border: 1px solid var(--card-edge);
@@ -548,6 +548,22 @@ body.dragging-cards, body.dragging-cards * { cursor: grabbing !important; }
 .opp.speaking .oname::after { content: ' 🔊'; }
 .player-list li.speaking { outline: 2px solid var(--ok); }
 
+/* ---------- Round result, voting, score sheet ---------- */
+
+.round-sub { margin: -4px 0 10px; font-weight: 700; color: var(--gold); }
+.round-sub[hidden], #vote-box[hidden], #over-box[hidden], #btn-round-open[hidden] { display: none; }
+.sheet-wrap { overflow-x: auto; margin: 0 -4px; }
+.sheet-table th, .sheet-table td { white-space: nowrap; }
+.sheet-table td.won { color: var(--gold); }
+.sheet-table tr.total td { font-weight: 800; border-top: 2px solid rgba(255, 255, 255, .35); }
+.sheet-table td.best { color: var(--ok); }
+.vote-question { margin: 16px 0 6px; font-size: 17px; }
+.vote-list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 4px; }
+.vote-list li { display: flex; justify-content: space-between; align-items: center; padding: 6px 2px; border-bottom: 1px solid rgba(255, 255, 255, .08); }
+.btn.chosen { outline: 3px solid #fff; outline-offset: 2px; }
+.sheet-btn { flex: 0 0 44px; align-self: center; }
+#btn-round-open { flex: 0 0 auto; }
+
 /* ---------- Toast ---------- */
 
 .toast {
@@ -597,7 +613,7 @@ dialog.sheet > .btn { width: 100%; }
 .scores td.num, .scores th.num { text-align: right; font-variant-numeric: tabular-nums; }
 .scores tr.winner td { color: var(--gold); font-weight: 700; }
 .scores .left-cards { display: flex; flex-wrap: wrap; gap: 2px; margin-top: 4px; }
-.scores .left-cards .card { --cw: 24px; font-size: 9px; }
+.scores .left-cards .card { --cw: 26px; font-size: 10px; box-shadow: none; }
 .scores .left-cards .card .pip { display: none; }
 
 .menu-conn { font-size: 13px; color: var(--ink-dim); margin: 12px 0; }

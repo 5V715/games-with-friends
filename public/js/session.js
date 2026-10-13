@@ -134,6 +134,11 @@ export class HostSession extends EventTarget {
     const g = this.game;
     switch (action.type) {
       case 'start':
+        if (g.phase !== 'lobby') throw new GameError('err.gameStarted');
+        g.start();
+        return;
+      case 'newGame':
+        if (g.phase !== 'gameOver') throw new GameError('err.roundRunning');
         g.start();
         return;
       case 'addBot': {
@@ -160,9 +165,9 @@ export class HostSession extends EventTarget {
   apply(pid, action) {
     if (!action || typeof action !== 'object') return { ok: false, error: 'Bad action', key: 'err.badAction' };
     let res;
-    if (['start', 'addBot', 'removePlayer', 'nextRound'].includes(action.type) && pid !== this.myId) {
+    if (['start', 'addBot', 'removePlayer', 'newGame'].includes(action.type) && pid !== this.myId) {
       res = { ok: false, error: 'Only the host can do that', key: 'err.hostOnly' };
-    } else if (['start', 'addBot', 'removePlayer'].includes(action.type)) {
+    } else if (['start', 'addBot', 'removePlayer', 'newGame'].includes(action.type)) {
       try { this.#hostAction(action); res = { ok: true }; } catch (e) { res = { ok: false, error: e.message, key: e.key, params: e.params }; }
     } else {
       res = this.game.apply(pid, action);
@@ -200,12 +205,14 @@ export class HostSession extends EventTarget {
   #scheduleBot() {
     clearTimeout(this.botTimer);
     const g = this.game;
-    const cur = g.actor;
+    const isAway = (p) => !p.bot && p.id !== this.myId && !this.playerToPeer.has(p.id);
+    // After a round, bots (and players who are away) vote to play on.
+    const cur = g.phase === 'roundOver' ? g.pendingVoters.find(p => p.bot || isAway(p)) : g.actor;
     if (!cur) return;
-    const away = !cur.bot && cur.id !== this.myId && !this.playerToPeer.has(cur.id);
+    const away = isAway(cur);
     if (!cur.bot && !away) return;
     this.botTimer = setTimeout(() => {
-      if (g.actor !== cur) return;
+      if (g.phase === 'roundOver' ? !g.pendingVoters.includes(cur) : g.actor !== cur) return;
       const action = botStep(g.view(cur.id));
       if (action && g.apply(cur.id, action).ok) this.broadcast();
     }, cur.bot || g.phase === 'play' ? (g.phase === 'cut' ? BOT_DELAY * 2 : BOT_DELAY) : AWAY_DELAY);
