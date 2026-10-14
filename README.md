@@ -19,7 +19,7 @@ host can still switch in the lobby.
 | --- | --- | --- |
 | **Rommé** | 2–6 | German rummy: sets and runs, 40 to come out, cutting the deck, Hand ×2, majority vote between rounds |
 | **UNO** | 2–8 | Match color/number/symbol, Skip/Reverse/+2/Wild/Wild +4, call UNO or get caught (+2), first to 500 |
-| **Monopoly Deal** | 2–5 | Three complete property sets win; rent, Debt Collector, Birthday, Sly/Forced Deal, Deal Breaker, Just Say No, houses/hotels |
+| **Monopoly Deal** | 2–5 | Three complete property sets win; real street names (US/German edition by language), tap any card or set for its rent ladder; rent, Debt Collector, Birthday, Sly/Forced Deal, Deal Breaker, Just Say No, houses/hotels |
 
 Every game runs on the host's browser, has bots, works in German and English, and
 supports push to talk. UNO and Monopoly Deal are trademarks of Mattel and Hasbro.

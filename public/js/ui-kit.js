@@ -48,7 +48,7 @@ export function closeChoice() {
 
 // Multi-select sheet (payments, discarding). `check(selectedIds)` returns
 // { ok, label } for the confirm button. Resolves with the selected ids.
-export function pick({ title, text = '', items, check, confirm, cancel = null }) {
+export function pick({ title, text = '', html = '', items, check, confirm, cancel = null }) {
   const dlg = document.getElementById('dlg-choice');
   current?.(null);
   const selected = new Set();
@@ -61,7 +61,7 @@ export function pick({ title, text = '', items, check, confirm, cancel = null })
     };
     current = done;
     dlg.querySelector('.choice-title').textContent = title;
-    dlg.querySelector('.choice-text').innerHTML = text ? `<p class="hint">${esc(text)}</p>` : '';
+    dlg.querySelector('.choice-text').innerHTML = html + (text ? `<p class="hint">${esc(text)}</p>` : '');
     const box = dlg.querySelector('.choice-options');
     box.innerHTML = '';
     const grid = document.createElement('div');

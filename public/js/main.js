@@ -4,7 +4,7 @@ import { SUIT_SYMBOL, RED_SUITS } from './cards.js';
 import { analyzeMeld, layOff, swapJoker } from './rules.js';
 import { HostSession, GuestSession } from './session.js';
 import { PushToTalk, VoicePlayer, voiceSupported, VOICE_MAX_MS } from './voice.js';
-import { t, msg, applyI18n, setLang, savedLang, LANGS, rankName } from './i18n.js';
+import { t, msg, applyI18n, setLang, savedLang, LANGS, rankName, lang as currentLang } from './i18n.js';
 import { GAMES, GAME_IDS, gameInfo, DEFAULT_GAME } from './games/index.js';
 import { createUnoUI } from './games/uno/ui.js';
 import { createDealUI } from './games/deal/ui.js';
@@ -1362,8 +1362,38 @@ function saveSettings() {
   toast(t('toast.saved'));
 }
 
+// Language buttons (start screen and menu). The choice is saved on this
+// device and wins over the browser language from then on.
+function chooseLang(code) {
+  setLang(code);
+  const q = new URLSearchParams(location.search);
+  if (q.has('lang')) {
+    q.delete('lang'); // a ?lang= link would otherwise override the saved choice
+    history.replaceState(null, '', location.pathname + (q.toString() ? `?${q}` : ''));
+    setLang(code);
+  }
+  translatePage();
+}
+
+function renderLangSwitches() {
+  for (const box of $$('[data-lang-switch]')) {
+    box.innerHTML = '';
+    for (const [code, name] of Object.entries(LANGS)) {
+      const b = document.createElement('button');
+      b.className = 'lang-opt' + (code === currentLang ? ' on' : '');
+      b.setAttribute('role', 'radio');
+      b.setAttribute('aria-checked', code === currentLang);
+      b.textContent = code.toUpperCase();
+      b.title = name;
+      b.onclick = () => chooseLang(code);
+      box.append(b);
+    }
+  }
+}
+
 // Applies the current language to all static and rendered text.
 function translatePage() {
+  renderLangSwitches();
   applyI18n();
   renderHomeGamePick();
   for (const o of $('#bot-count').options) o.textContent = t('home.bots', { n: Number(o.value) });

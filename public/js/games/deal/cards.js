@@ -36,7 +36,8 @@ export function createDealDeck() {
   for (const [value, count] of MONEY) for (let i = 0; i < count; i++) add({ type: 'money', value });
   for (const [action, count, value] of ACTIONS) for (let i = 0; i < count; i++) add({ type: 'action', action, value });
   for (const [colors, count, value] of RENTS) for (let i = 0; i < count; i++) add({ type: 'rent', colors, value });
-  for (const color of COLORS) for (let i = 0; i < SETS[color].size; i++) add({ type: 'prop', color, value: SETS[color].value });
+  // Each property is a named street (see deal.street.<color>.<n> in strings.js).
+  for (const color of COLORS) for (let i = 0; i < SETS[color].size; i++) add({ type: 'prop', color, street: i, value: SETS[color].value });
   for (const [colors, count, value] of WILDS) for (let i = 0; i < count; i++) add({ type: 'wild', colors, value });
   return cards;
 }
@@ -55,7 +56,7 @@ const pairT = (cs) => (cs === 'any' ? null : { t: 'deal.two', p: { a: colorT(cs[
 export function cardLabel(card) {
   switch (card.type) {
     case 'money': return { t: 'deal.card.money', p: { v: card.value } };
-    case 'prop': return { t: 'deal.card.prop', p: { color: colorT(card.color) } };
+    case 'prop': return card.street != null ? { t: `deal.street.${card.color}.${card.street}` } : { t: 'deal.card.prop', p: { color: colorT(card.color) } };
     case 'wild': return card.colors === 'any' ? { t: 'deal.card.wildAny' } : { t: 'deal.card.wild', p: { colors: pairT(card.colors) } };
     case 'rent': return card.colors === 'any' ? { t: 'deal.card.rentAny' } : { t: 'deal.card.rent', p: { colors: pairT(card.colors) } };
     default: return { t: `deal.card.${card.action}` };

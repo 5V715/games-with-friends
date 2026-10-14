@@ -68,7 +68,14 @@ test('bots can finish many rounds without getting stuck', () => {
         const action = botStep(g.view(id));
         const res = g.apply(id, action);
         assert.ok(res.ok, `${JSON.stringify(action)}: ${res.error}`);
-        assert.ok(++steps < 20000, 'game did not finish');
+        if (++steps >= 20000) {
+          // Diagnostics for a (very rare) round that never ends.
+          const state = {
+            players: g.players.map(p => ({ out: p.cameOut, hand: p.hand.length })),
+            stock: g.stock.length, discard: g.discard.length, melds: g.melds.length, log: g.log.slice(-6),
+          };
+          assert.fail(`round did not finish: ${JSON.stringify(state)}`);
+        }
       }
       const total = g.players.reduce((s, p) => s + p.hand.length, 0) +
         g.stock.length + g.discard.length + g.melds.reduce((s, m) => s + m.slots.length, 0);

@@ -290,7 +290,7 @@ export class DealGame {
       this.#usePlay(1 + doubles.length);
       for (const d of doubles) { this.#remove(p, d); this.discard.push(d); }
       const amount = rentFor(p, a.color) * 2 ** doubles.length;
-      pending = { kind: 'pay', card, amount, targets: targets.map(t => t.id) };
+      pending = { kind: 'pay', amount, rentColor: a.color, doubled: doubles.length, targets: targets.map(t => t.id) };
       this.#remove(p, card);
       this.discard.push(card);
       this.say('deal.log.rent', { name: p.name, amount, color: colorT(a.color), doubled: doubles.length > 0 });
@@ -354,7 +354,8 @@ export class DealGame {
     }
 
     if (pending) {
-      this.pending = { ...pending, source: p.id, label: cardLabel(card), i: -1, stage: null };
+      // `card` lets the targets see exactly what was played against them.
+      this.pending = { ...pending, source: p.id, card, label: cardLabel(card), i: -1, stage: null };
       this.#nextTarget();
     }
   }
@@ -535,6 +536,7 @@ export class DealGame {
       pending: pd && {
         kind: pd.kind, source: pd.source, target: pd.targets[pd.i], stage: pd.stage, amount: pd.amount,
         label: pd.label, propId: pd.propId, myPropId: pd.myPropId, color: pd.color,
+        card: pd.card, rentColor: pd.rentColor, doubled: pd.doubled,
       },
       players: this.players.map(p => ({
         id: p.id, name: p.name, bot: p.bot, count: p.hand.length,

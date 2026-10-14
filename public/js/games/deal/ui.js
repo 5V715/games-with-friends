@@ -30,7 +30,7 @@ export function createDealUI(ctx) {
       case 'money':
         return `<div class="dcard d-money${small ? ' small' : ''}">${v}<span class="d-big">${card.value}M</span></div>`;
       case 'prop':
-        return `<div class="dcard d-prop${small ? ' small' : ''}"><span class="d-band col-${card.color}"></span>${v}<span class="d-name">${esc(colorName(card.color))}</span><span class="d-rent">${SETS[card.color].rent.map((r, i) => `${i + 1}:${r}M`).join(' ')}</span></div>`;
+        return `<div class="dcard d-prop${small ? ' small' : ''}"><span class="d-band col-${card.color}"><span class="d-street">${name}</span></span>${v}${small ? '' : miniLadder(card.color)}</div>`;
       case 'wild': {
         const cs = card.colors === 'any' ? null : card.colors;
         const band = cs ? `<span class="d-band split"><span class="col-${cs[0]}"></span><span class="col-${cs[1]}"></span></span>` : '<span class="d-band rainbow"></span>';
@@ -46,6 +46,36 @@ export function createDealUI(ctx) {
     }
   }
 
+  // Rent ladder as printed on the property cards: ▮ 1M, ▮▮ 2M, … ★ complete.
+  function miniLadder(color) {
+    const set = SETS[color];
+    return `<span class="d-ladder">${set.rent.map((r, i) =>
+      `<span><i>${'▮'.repeat(i + 1)}</i><b>${r}M</b></span>`).join('')}</span>`;
+  }
+
+  function ladderHtml(color, have = null, buildings = {}) {
+    const set = SETS[color];
+    const rows = set.rent.map((r, i) => {
+      const n = i + 1;
+      const full = n === set.size;
+      return `<tr class="${have != null && Math.min(have, set.size) === n ? 'now' : ''}"><td class="cnt">${'▮'.repeat(n)}</td>` +
+        `<td>${n}${full ? ` · ${esc(t('deal.ladder.full'))} ★` : ''}</td><td class="num">${r}M</td></tr>`;
+    }).join('');
+    const extra = NO_BUILDINGS.has(color) ? '' :
+      `<tr class="${buildings.house ? 'now' : ''}"><td>🏠</td><td>${esc(t('deal.ladder.house'))}</td><td class="num">+3M</td></tr>` +
+      `<tr class="${buildings.hotel ? 'now' : ''}"><td>🏨</td><td>${esc(t('deal.ladder.hotel'))}</td><td class="num">+4M</td></tr>`;
+    return `<table class="ladder col-${color}"><caption><span class="swatch-sq col-${color}"></span>${esc(colorName(color))} · ${esc(t('deal.ladder.title'))}</caption>${rows}${extra}</table>`;
+  }
+
+  // Big card plus everything printed on it (rent ladders, description).
+  function cardDetailHtml(card) {
+    let more = '';
+    if (card.type === 'prop' || card.type === 'wild') more = cardColors(card).map(c => ladderHtml(c)).join('');
+    const desc = card.type === 'action' ? t('deal.desc.' + card.action)
+      : card.type === 'rent' ? t(card.colors === 'any' ? 'deal.desc.rentAny' : 'deal.desc.rent') : '';
+    return `<div class="choice-card">${cardHtml(card)}</div>${desc ? `<p class="hint">${esc(desc)}</p>` : ''}<div class="ladders">${more}</div>`;
+  }
+
   // ---- tables -----------------------------------------------------------------
 
   function stacksHtml(p, mine) {
@@ -56,7 +86,7 @@ export function createDealUI(ctx) {
       const b = p.buildings[c] || {};
       const blds = (b.house ? '🏠' : '') + (b.hotel ? '🏨' : '');
       const wild = stack(p, c).some(e => e.card.type === 'wild');
-      return `<button class="stack col-${c}${isFull(p, c) ? ' full' : ''}" data-color="${c}" data-owner="${p.id}" ${mine ? '' : 'tabindex="-1"'}>
+      return `<button class="stack col-${c}${isFull(p, c) ? ' full' : ''}" data-color="${c}" data-owner="${p.id}">
         <span class="stack-name">${esc(colorName(c))}${wild ? ' ✦' : ''}</span><span class="stack-n">${Math.min(n, 99)}/${SETS[c].size}${blds}</span></button>`;
     }).join('');
   }
@@ -93,7 +123,7 @@ export function createDealUI(ctx) {
     const order = [...others(), me()].filter(Boolean);
     main.innerHTML = `<div class="deal-tables">${order.map(tableHtml).join('')}</div>`;
     main.scrollTop = scroll;
-    for (const b of main.querySelectorAll('.dtable.mine .stack')) b.onclick = () => stackMenu(b.dataset.color);
+    for (const b of main.querySelectorAll('.stack')) b.onclick = () => stackMenu(b.dataset.owner, b.dataset.color);
   }
 
   function renderStatus() {
@@ -151,26 +181,23 @@ export function createDealUI(ctx) {
 
   function cardMenu(card) {
     run(async () => {
-      if (!myTurn()) return toast(view.pending ? t('deal.err.pending') : t('toast.waitTurn'));
-      if (!view.playsLeft) return toast(t('deal.err.noPlays'), { error: true });
       const options = [];
-      if (card.type === 'prop' || card.type === 'wild') {
+      const canAct = myTurn() && view.playsLeft > 0;
+      if (canAct && (card.type === 'prop' || card.type === 'wild')) {
         for (const c of cardColors(card)) options.push({ label: t('deal.opt.property', { color: colorName(c) }), value: ['property', c], primary: true });
       }
-      if (card.type === 'action' && !['jsn', 'double'].includes(card.action)) {
+      if (canAct && card.type === 'action' && !['jsn', 'double'].includes(card.action)) {
         options.push({ label: t('deal.opt.play', { card: L(cardLabel(card)) }), value: ['action'], primary: true });
       }
-      if (card.type === 'rent') options.push({ label: t('deal.opt.play', { card: L(cardLabel(card)) }), value: ['action'], primary: true });
-      if (card.type !== 'prop' && card.type !== 'wild' && card.value > 0) {
+      if (canAct && card.type === 'rent') options.push({ label: t('deal.opt.play', { card: L(cardLabel(card)) }), value: ['action'], primary: true });
+      if (canAct && card.type !== 'prop' && card.type !== 'wild' && card.value > 0) {
         options.push({ label: t('deal.opt.bank', { v: card.value }), value: ['bank'] });
       }
-      const desc = card.type === 'action' ? t('deal.desc.' + card.action)
-        : card.type === 'rent' ? t(card.colors === 'any' ? 'deal.desc.rentAny' : 'deal.desc.rent') : '';
       const choice = await choose({
         title: L(cardLabel(card)),
-        html: `<div class="choice-card">${cardHtml(card)}</div>${desc ? `<p class="hint">${esc(desc)}</p>` : ''}`,
+        html: cardDetailHtml(card),
         options,
-        cancel: cancel(),
+        cancel: options.length ? cancel() : t('deal.close'),
       });
       if (!choice) return;
       if (choice[0] === 'bank') return act({ type: 'bank', cardId: card.id });
@@ -275,24 +302,38 @@ export function createDealUI(ctx) {
     }
   }
 
-  // Tap one of your stacks: rearrange wild properties.
-  function stackMenu(color) {
+  // Tap any set: its cards, the rent ladder (current step highlighted) and,
+  // for your own sets on your turn, moving wild properties.
+  function stackMenu(ownerId, color) {
     run(async () => {
-      if (!myTurn()) return;
-      const wilds = stack(me(), color).filter(e => e.card.type === 'wild');
+      const owner = view.players.find(p => p.id === ownerId);
+      if (!owner) return;
+      const st = stack(owner, color);
       const options = [];
-      for (const e of wilds) {
-        for (const c of cardColors(e.card)) {
-          if (c !== color) options.push({ label: `${L(cardLabel(e.card))} → ${colorName(c)}`, value: [e.card.id, c] });
+      if (ownerId === view.you && myTurn()) {
+        for (const e of st.filter(x => x.card.type === 'wild')) {
+          for (const c of cardColors(e.card)) {
+            if (c !== color) options.push({ label: t('deal.opt.move', { color: colorName(c) }) + ` (${L(cardLabel(e.card))})`, value: [e.card.id, c] });
+          }
         }
       }
-      if (!options.length) return;
-      const choice = await choose({ title: colorName(color), options, cancel: cancel() });
+      const html = `<p class="hint">${esc(t('deal.stack.cards'))}</p>` +
+        `<div class="stack-cards">${st.map(e => cardHtml(e.card, { small: true, color: e.card.type === 'wild' ? e.color : null })).join('')}</div>` +
+        `<p class="stack-now">${esc(t('deal.stack.now', { n: rentFor(owner, color) }))}</p>` +
+        ladderHtml(color, st.length, owner.buildings[color] || {});
+      const choice = await choose({ title: `${pname(ownerId)} · ${colorName(color)}`, html, options, cancel: t('deal.close') });
       if (choice) act({ type: 'move', cardId: choice[0], color: choice[1] });
     });
   }
 
   // ---- decisions: Just Say No, paying, discarding ----------------------------
+
+  // The card played against you, with what it means for you.
+  function playedHtml(pd) {
+    if (!pd.card) return '';
+    const rent = pd.rentColor ? `<p class="hint">${esc(t('deal.respond.rentFor', { color: colorName(pd.rentColor), doubled: pd.doubled > 0 }))}</p>` : '';
+    return `<p class="hint">${esc(t('deal.respond.played'))}</p><div class="choice-card">${cardHtml(pd.card)}</div>${rent}`;
+  }
 
   function pendingText(pd) {
     if (pd.kind === 'pay') return t('deal.respond.pay', { amount: pd.amount });
@@ -328,7 +369,7 @@ export function createDealUI(ctx) {
     if (pd.stage === 'respond') {
       const answer = await choose({
         title: t('deal.respond.title', { name: pname(pd.source), card: L(pd.label) }),
-        text: pendingText(pd),
+        html: playedHtml(pd) + `<p class="hint"><b>${esc(pendingText(pd))}</b></p>`,
         options: [
           { label: t('deal.respond.jsn'), value: 'jsn', primary: true, disabled: !hasJsn },
           { label: t('deal.respond.accept'), value: 'accept' },
@@ -351,6 +392,7 @@ export function createDealUI(ctx) {
       const value = (ids) => ids.reduce((s, id) => s + (all.find(x => x.card.id === id)?.card.value || 0), 0);
       const ids = await pick({
         title: t('deal.pay.title', { amount: pd.amount, name: pname(pd.source) }),
+        html: playedHtml(pd),
         text: t('deal.pay.hint'),
         items: all.map(x => ({
           id: x.card.id,

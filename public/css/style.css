@@ -604,6 +604,20 @@ body.dragging-cards, body.dragging-cards * { cursor: grabbing !important; }
 .sheet-btn { flex: 0 0 44px; align-self: center; }
 #btn-round-open { flex: 0 0 auto; }
 
+/* ---------- Language switch ---------- */
+
+.lang-switch { display: flex; gap: 4px; }
+.home-lang { position: absolute; top: calc(10px + var(--safe-t)); right: 12px; z-index: 5; }
+#screen-home { position: relative; }
+.menu-lang { justify-content: center; margin: 4px 0 10px; }
+.lang-opt {
+  min-width: 44px; min-height: 36px; padding: 0 10px;
+  border-radius: 999px; border: 1px solid rgba(255, 255, 255, .25);
+  background: rgba(0, 0, 0, .25); color: var(--ink-dim);
+  font: 700 13px/1 system-ui, sans-serif; letter-spacing: .06em; cursor: pointer;
+}
+.lang-opt.on { background: var(--gold); color: var(--accent-ink); border-color: transparent; }
+
 /* ---------- Game choice ---------- */
 
 .game-pick { display: flex; gap: 8px; }
@@ -763,6 +777,41 @@ body.dragging-cards, body.dragging-cards * { cursor: grabbing !important; }
 .dcard .d-name { overflow-wrap: anywhere; max-width: 100%; }
 .dcard.small.d-wild .d-name, .dcard.small.d-rent .d-name { font-size: 8px; }
 .plays { color: var(--gold); letter-spacing: 2px; }
+
+/* Property cards: street name in the colour band, rent ladder below */
+.dcard.d-prop { justify-content: flex-start; padding-top: 0; }
+.dcard.d-prop .d-band {
+  position: relative; height: auto; min-height: 38%; width: calc(100% + 8px); margin: 0 -4px 4px;
+  display: flex; align-items: flex-end; justify-content: center; padding: 18px 3px 3px;
+}
+.dcard .d-street {
+  color: #fff; font: 800 10px/1.1 system-ui, sans-serif; text-align: center;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, .55); overflow-wrap: anywhere;
+}
+.col-yellow .d-street, .col-lblue .d-street, .col-util .d-street { color: #1b1b1f; text-shadow: none; }
+.dcard.small.d-prop .d-band { min-height: 100%; padding-top: 14px; }
+.dcard.small .d-street { font-size: 8px; }
+.d-ladder { display: flex; flex-direction: column; gap: 1px; width: 100%; padding: 0 3px; }
+.d-ladder span { display: flex; justify-content: space-between; font-size: 9px; line-height: 1.15; }
+.d-ladder i { font-style: normal; letter-spacing: -1px; color: #666; }
+.d-ladder b { font-weight: 800; }
+.choice-card .dcard { --cw: 120px; font-size: 13px; }
+.choice-card .dcard .d-street { font-size: 13px; }
+.choice-card .d-ladder span { font-size: 12px; }
+
+/* Rent table in the card / set detail sheet */
+.ladders { display: flex; flex-direction: column; gap: 10px; }
+.ladder { width: 100%; border-collapse: collapse; font-size: 14px; background: rgba(0, 0, 0, .2); border-radius: 10px; overflow: hidden; }
+.ladder caption { text-align: left; font-weight: 800; padding: 6px 2px; white-space: nowrap; }
+.ladder caption .swatch-sq { vertical-align: -2px; margin-right: 8px; }
+.ladder td { padding: 6px 8px; border-top: 1px solid rgba(255, 255, 255, .08); }
+.ladder td.cnt { color: var(--dc); letter-spacing: -1px; width: 1%; white-space: nowrap; }
+.ladder td.num { text-align: right; font-weight: 800; font-variant-numeric: tabular-nums; }
+.ladder tr.now td { background: rgba(242, 193, 78, .22); color: var(--gold); }
+.swatch-sq { width: 16px; height: 16px; border-radius: 4px; background: var(--dc); border: 2px solid #fff; display: inline-block; }
+.stack-cards { display: flex; flex-wrap: wrap; gap: 6px; justify-content: center; }
+.stack-cards .dcard { cursor: default; }
+.stack-now { font-weight: 800; color: var(--gold); text-align: center; margin: 10px 0 6px; }
 .choice-card { display: flex; justify-content: center; margin: 4px 0 8px; --cw: 96px; }
 
 /* ---------- Multi-select sheet ---------- */
