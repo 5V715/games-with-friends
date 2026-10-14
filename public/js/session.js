@@ -262,11 +262,14 @@ export class HostSession extends EventTarget {
         else if (p.id !== this.myId && !this.playerToPeer.has(p.id)) g.setInput(p.id, null);
       }
       g.tick();
-      const f = g.frame();
-      if (g.tickNo % FRAME_EVERY === 0 || f.e.length) {
-        for (const peerId of this.playerToPeer.values()) this.net?.sendFast(peerId, { t: 'frame', f });
+      // Games that simulate each board on its own device send no frames.
+      const f = g.frame?.();
+      if (f) {
+        if (g.tickNo % FRAME_EVERY === 0 || f.e.length) {
+          for (const peerId of this.playerToPeer.values()) this.net?.sendFast(peerId, { t: 'frame', f });
+        }
+        emit(this, 'frame', f);
       }
-      emit(this, 'frame', f);
       if (g.changed) {
         g.changed = false;
         this.broadcast();

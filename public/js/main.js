@@ -9,9 +9,10 @@ import { GAMES, GAME_IDS, gameInfo, DEFAULT_GAME } from './games/index.js';
 import { createUnoUI } from './games/uno/ui.js';
 import { createDealUI } from './games/deal/ui.js';
 import { createBomberUI } from './games/bomber/ui.js';
+import { createStackedUI } from './games/stacked/ui.js';
 import { closeChoice } from './ui-kit.js';
 
-const PLAY_UIS = { uno: createUnoUI, deal: createDealUI, bomber: createBomberUI };
+const PLAY_UIS = { uno: createUnoUI, deal: createDealUI, bomber: createBomberUI, stacked: createStackedUI };
 import {
   HostNet, GuestNet, getNetConfig, randomId, randomRoomCode, loadTurnSettings, saveTurnSettings,
   signalingUrl, savedSignalingUrl, saveSignalingUrl, defaultSignalingUrl,
@@ -1163,10 +1164,10 @@ function bindPushToTalk(btn) {
   btn.addEventListener('lostpointercapture', release);
 }
 
-// Bomber Buben on a keyboard: hold T to talk.
+// Real-time games on a keyboard: hold T to talk.
 function bindTalkKey() {
   let held = false;
-  const playing = () => $('#screen-play.active')?.dataset.game === 'bomber' && !$('#btn-ptt2').hidden
+  const playing = () => ['bomber', 'stacked'].includes($('#screen-play.active')?.dataset.game) && !$('#btn-ptt2').hidden
     && !document.querySelector('dialog[open]');
   window.addEventListener('keydown', (e) => {
     if (e.code !== 'KeyT' || e.repeat || held || !playing()) return;

@@ -10,6 +10,7 @@ import { DealGame, MIN_PLAYERS as DEAL_MIN, MAX_PLAYERS as DEAL_MAX } from './de
 import { botStep as dealBot } from './deal/bot.js';
 import { BomberGame, MIN_PLAYERS as BOMBER_MIN, MAX_PLAYERS as BOMBER_MAX } from './bomber/engine.js';
 import { botInput as bomberBot } from './bomber/bot.js';
+import { StackedGame, MIN_PLAYERS as STACKED_MIN, MAX_PLAYERS as STACKED_MAX } from './stacked/engine.js';
 
 export const GAMES = {
   romme: { id: 'romme', icon: '🂡', min: ROMME_MIN, max: ROMME_MAX, create: () => new RommeGame(), bot: rommeBot, rules: 'rules.html' },
@@ -17,6 +18,8 @@ export const GAMES = {
   deal: { id: 'deal', icon: '🏠', min: DEAL_MIN, max: DEAL_MAX, create: () => new DealGame(), bot: dealBot, rules: 'deal.rules.html' },
   // Real-time: the host runs a tick loop and asks the bot for input every tick.
   bomber: { id: 'bomber', icon: '💣', min: BOMBER_MIN, max: BOMBER_MAX, create: () => new BomberGame(), bot: bomberBot, rules: 'bomber.rules.html', realtime: true },
+  // Real-time too, but every well runs on its own device; bots run inside the game.
+  stacked: { id: 'stacked', icon: '🧱', min: STACKED_MIN, max: STACKED_MAX, create: () => new StackedGame(), bot: () => null, rules: 'stacked.rules.html', realtime: true },
 };
 
 export const GAME_IDS = Object.keys(GAMES);
