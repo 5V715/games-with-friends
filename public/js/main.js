@@ -177,6 +177,7 @@ function attach(session) {
   ui.link = null;
   ui.speaking = null;
   ui.play = null;
+  ui.shared = false;
   document.body.classList.toggle('is-host', session.isHost);
 
   session.addEventListener('state', (ev) => {
@@ -471,6 +472,9 @@ function renderLobby() {
   const v = ui.view;
   $('#room-code').textContent = v.room || '—';
   $('#btn-share').hidden = !v.room;
+  // A fresh table: show the host where to tap to invite friends.
+  const alone = v.players.every(p => p.id === v.you || p.bot);
+  $('#btn-share').classList.toggle('hint', ui.session.isHost && alone && !ui.shared);
   $('#room-box').hidden = !v.room;
   const list = $('#lobby-players');
   list.innerHTML = '';
@@ -1134,22 +1138,48 @@ function capture(el, pointerId) {
   try { el.setPointerCapture(pointerId); } catch { /* pointer already gone */ }
 }
 
+function startTalking() {
+  voicePlayer.unlock();
+  if (!ui.session?.canTalk) {
+    toast(t('ptt.nobodyYet'), { error: true });
+    return false;
+  }
+  ptt.start().catch((err) => {
+    const denied = err?.name === 'NotAllowedError' || err?.name === 'SecurityError';
+    toast(denied ? t('ptt.denied') : t('ptt.noMic'), { error: true });
+  });
+  return true;
+}
+
 function bindPushToTalk(btn) {
   btn.addEventListener('contextmenu', (e) => e.preventDefault());
   btn.addEventListener('pointerdown', (e) => {
     e.preventDefault();
-    voicePlayer.unlock();
-    if (!ui.session?.canTalk) return toast(t('ptt.nobodyYet'), { error: true });
-    capture(btn, e.pointerId);
-    ptt.start().catch((err) => {
-      const denied = err?.name === 'NotAllowedError' || err?.name === 'SecurityError';
-      toast(denied ? t('ptt.denied') : t('ptt.noMic'), { error: true });
-    });
+    if (startTalking()) capture(btn, e.pointerId);
   });
   const release = () => { ptt.stop(); };
   btn.addEventListener('pointerup', release);
   btn.addEventListener('pointercancel', release);
   btn.addEventListener('lostpointercapture', release);
+}
+
+// Bomber Buben on a keyboard: hold T to talk.
+function bindTalkKey() {
+  let held = false;
+  const playing = () => $('#screen-play.active')?.dataset.game === 'bomber' && !$('#btn-ptt2').hidden
+    && !document.querySelector('dialog[open]');
+  window.addEventListener('keydown', (e) => {
+    if (e.code !== 'KeyT' || e.repeat || held || !playing()) return;
+    e.preventDefault();
+    held = startTalking();
+  });
+  const release = (e) => {
+    if (!held || (e && e.code !== 'KeyT')) return;
+    held = false;
+    ptt.stop();
+  };
+  window.addEventListener('keyup', release);
+  window.addEventListener('blur', () => release());
 }
 
 // ---------------------------------------------------------------- connection flows
@@ -1472,6 +1502,8 @@ function bind() {
     closeDialog('dlg-invite');
   };
   $('#btn-share').onclick = async () => {
+    ui.shared = true;
+    $('#btn-share').classList.remove('hint');
     const url = roomUrl(ui.room);
     if (navigator.share) {
       try { await navigator.share({ title: 'Games with Friends', text: t('lobby.shareText', { room: ui.room }), url }); return; } catch { /* cancelled */ }
@@ -1515,6 +1547,7 @@ function bind() {
 
   bindPushToTalk($('#btn-ptt'));
   bindPushToTalk($('#btn-ptt2'));
+  bindTalkKey();
   $('#btn-menu2').onclick = openMenu;
   $('#btn-result-open').onclick = () => openDialog('dlg-round');
   bindPushToTalk($('#btn-ptt-lobby'));

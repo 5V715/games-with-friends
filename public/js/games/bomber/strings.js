@@ -28,7 +28,7 @@ addStrings({
       <p>Up to 4 players in a walled arena. Blow up the others with bombs — the last one standing wins the round. <b>Best of 3</b>: whoever wins 2 rounds wins the match.</p>
       <h3>Controls</h3>
       <p>Hold the phone sideways. Left: the <b>D-pad</b>. Right: <b>A</b> drops a bomb, <b>B</b> sets off your remote bombs or stops a bomb you kicked.
-        On a keyboard: arrow keys or WASD, Space/K for A, Shift/J for B.</p>
+        On a keyboard: arrow keys or WASD, Space/K for A, Shift/J for B, hold T to talk.</p>
       <h3>Bombs</h3>
       <p>A bomb explodes after 2.5 seconds in a cross. Flames stop at walls, destroy soft blocks and set off other bombs. You can walk off your own bomb, but not back onto it.</p>
       <h3>Items</h3>
@@ -67,7 +67,7 @@ addStrings({
       <p>Bis zu 4 Spieler in einer ummauerten Arena. Spreng die anderen mit Bomben weg – wer als Letzter steht, gewinnt die Runde. <b>Best of 3</b>: Wer 2 Runden gewinnt, gewinnt das Match.</p>
       <h3>Steuerung</h3>
       <p>Halte das Handy quer. Links das <b>Steuerkreuz</b>, rechts <b>A</b> zum Bombe-Legen und <b>B</b>, um deine Fernzünder-Bomben zu zünden oder eine gekickte Bombe anzuhalten.
-        Mit Tastatur: Pfeiltasten oder WASD, Leertaste/K für A, Shift/J für B.</p>
+        Mit Tastatur: Pfeiltasten oder WASD, Leertaste/K für A, Shift/J für B, T gedrückt halten zum Sprechen.</p>
       <h3>Bomben</h3>
       <p>Eine Bombe explodiert nach 2,5 Sekunden in Kreuzform. Flammen stoppen an Mauern, zerstören weiche Blöcke und zünden andere Bomben. Von deiner eigenen Bombe kannst du heruntergehen, aber nicht wieder darauf.</p>
       <h3>Items</h3>
