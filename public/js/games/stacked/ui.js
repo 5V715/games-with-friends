@@ -109,6 +109,9 @@ export function createStackedUI(ctx) {
   const flashes = []; // { rows, until }
   const keys = { left: false, right: false, down: false, dir: 0, dasAt: 0, arrAt: 0, softAt: 0 };
   let callout = null; // { text, until }
+  try {
+    if (localStorage.getItem('stacked.debug')) window.stackedDebug = { well: () => well };
+  } catch { /* storage blocked */ }
 
   // ---- layout ----
   function build() {
@@ -220,19 +223,26 @@ export function createStackedUI(ctx) {
       // Tapping the hold box holds the piece.
       if (e.target.closest('.st-holdbox')) { doHold(); return; }
       try { el.setPointerCapture(e.pointerId); } catch { /* ignore */ }
-      g = { id: e.pointerId, x0: e.clientX, y0: e.clientY, ax: e.clientX, ay: e.clientY, t0: performance.now(), moved: false };
+      g = { id: e.pointerId, x0: e.clientX, y0: e.clientY, ax: e.clientX, ay: e.clientY, t0: performance.now(), moved: false, axis: null };
     });
     el.addEventListener('pointermove', (e) => {
       if (!g || e.pointerId !== g.id) return;
+      // Each swipe is either sideways (move) or up/down (fall, drop, hold),
+      // decided by its first few pixels, so a flick down never drifts.
+      if (!g.axis) {
+        const adx = Math.abs(e.clientX - g.x0), ady = Math.abs(e.clientY - g.y0);
+        if (Math.max(adx, ady) < 12) return;
+        g.axis = adx > ady ? 'x' : 'y';
+      }
       const step = cell * 0.85;
-      while (Math.abs(e.clientX - g.ax) >= step) {
+      while (g.axis === 'x' && Math.abs(e.clientX - g.ax) >= step) {
         const dir = Math.sign(e.clientX - g.ax);
         doMove(dir);
         g.ax += dir * step;
         g.moved = true;
       }
       // Dragging down slowly: soft drop, one row per cell of movement.
-      while (e.clientY - g.ay >= cell) {
+      while (g.axis === 'y' && e.clientY - g.ay >= cell) {
         doSoft();
         g.ay += cell;
         g.moved = true;
@@ -242,7 +252,7 @@ export function createStackedUI(ctx) {
     const end = (e) => {
       if (!g || e.pointerId !== g.id) return;
       const dx = e.clientX - g.x0, dy = e.clientY - g.y0, dt = Math.max(1, performance.now() - g.t0);
-      const vertical = Math.abs(dy) > Math.abs(dx) * 1.4;
+      const vertical = g.axis === 'y';
       if (e.type === 'pointerup') {
         if (vertical && dy > 40 && dy / dt > 0.5) doDrop();
         else if (vertical && dy < -40 && -dy / dt > 0.4) doHold();
