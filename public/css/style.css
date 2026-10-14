@@ -825,6 +825,14 @@ body.dragging-cards, body.dragging-cards * { cursor: grabbing !important; }
 .pick-item.on { border-color: var(--gold); background: rgba(242, 193, 78, .18); }
 .pick-note { font-size: 10px; padding: 1px 6px; border-radius: 999px; background: var(--dc); color: #fff; }
 .pick-status { text-align: center; font-weight: 700; margin: 8px 0 0; }
+.pick-footer {
+  position: sticky; bottom: -18px; z-index: 2;
+  margin: 8px -18px -18px; padding: 8px 18px 18px;
+  background: linear-gradient(rgba(18, 48, 31, 0), #12301f 14px);
+  display: flex; flex-direction: column; gap: 8px;
+}
+.pick-footer .btn { width: 100%; }
+.choice-title:focus { outline: none; }
 #dlg-choice .choice-options .btn { width: 100%; }
 
 /* ---------- Toast ---------- */

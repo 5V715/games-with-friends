@@ -6,6 +6,17 @@ export function esc(s) {
 
 let current = null;
 
+// Opens the sheet scrolled to the top. Without this the browser focuses the
+// first enabled button and scrolls down to it (e.g. far below a long card list).
+function showAtTop(dlg) {
+  const title = dlg.querySelector('.choice-title');
+  title.tabIndex = -1;
+  if (!dlg.open) dlg.showModal();
+  title.focus({ preventScroll: true });
+  dlg.scrollTop = 0;
+  requestAnimationFrame(() => { dlg.scrollTop = 0; });
+}
+
 // Shows a sheet with buttons and resolves with the chosen value (null = cancel).
 //   choose({ title, text, html, options: [{ label, value, primary, disabled, html }], cancel: 'Cancel' })
 export function choose({ title, text = '', html = '', options = [], cancel = null }) {
@@ -38,7 +49,7 @@ export function choose({ title, text = '', html = '', options = [], cancel = nul
     c.textContent = cancel || '';
     c.onclick = () => done(null);
     dlg.oncancel = (e) => { if (!cancel) e.preventDefault(); else done(null); };
-    if (!dlg.open) dlg.showModal();
+    showAtTop(dlg);
   });
 }
 
@@ -89,13 +100,17 @@ export function pick({ title, text = '', html = '', items, check, confirm, cance
       grid.append(b);
     }
     ok.onclick = () => done([...selected]);
-    box.append(grid, status, ok);
+    // Total and confirm button stay visible at the bottom while scrolling.
+    const footer = document.createElement('div');
+    footer.className = 'pick-footer';
+    footer.append(status, ok);
+    box.append(grid, footer);
     update();
     const c = dlg.querySelector('.choice-cancel');
     c.hidden = !cancel;
     c.textContent = cancel || '';
     c.onclick = () => done(null);
     dlg.oncancel = (e) => { if (!cancel) e.preventDefault(); else done(null); };
-    if (!dlg.open) dlg.showModal();
+    showAtTop(dlg);
   });
 }
