@@ -86,7 +86,7 @@ const STRINGS = {
 
     // ---- home
     'game.romme': 'Rommé',
-    'home.tagline': 'Rommé, UNO, Monopoly Deal and Bomb Party with your friends — browser to browser, no account needed.',
+    'home.tagline': 'Rommé, UNO, Monopoly Deal and Bomber Buben with your friends — browser to browser, no account needed.',
     'home.pickGame': 'Choose a game',
     'home.name': 'Your name',
     'home.namePh': 'Name',
@@ -353,7 +353,7 @@ const STRINGS = {
     'log.gameOver': 'Spiel vorbei — {names} gewinnt mit {points} Punkten',
 
     'game.romme': 'Rommé',
-    'home.tagline': 'Rommé, UNO, Monopoly Deal und Bomb Party mit Freunden — direkt von Browser zu Browser, ohne Konto.',
+    'home.tagline': 'Rommé, UNO, Monopoly Deal und Bomber Buben mit Freunden — direkt von Browser zu Browser, ohne Konto.',
     'home.pickGame': 'Wähle ein Spiel',
     'home.name': 'Dein Name',
     'home.namePh': 'Name',

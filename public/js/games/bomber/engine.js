@@ -1,4 +1,4 @@
-// Bomb Party: real-time arena game in the style of the classic battle mode.
+// Bomber Buben: real-time arena game in the style of the classic battle mode.
 //
 // The host simulates the game at 60 ticks per second. Players send their
 // input (direction + button press counters); the host sends a compact frame

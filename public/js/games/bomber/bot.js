@@ -1,4 +1,4 @@
-// Bomb Party computer player. Runs on the host every tick with direct access
+// Bomber Buben computer player. Runs on the host every tick with direct access
 // to the engine: builds a danger map from all bombs and flames, flees when
 // standing in a blast line, otherwise collects items, blasts soft blocks and
 // hunts the others — but only drops a bomb when there is a way out.

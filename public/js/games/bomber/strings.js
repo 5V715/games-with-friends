@@ -2,7 +2,7 @@ import { addStrings } from '../../i18n.js';
 
 addStrings({
   en: {
-    'game.bomber': 'Bomb Party',
+    'game.bomber': 'Bomber Buben',
     'bomber.rotate': 'Turn your phone sideways to play',
     'bomber.ready': 'Ready?',
     'bomber.go': 'GO!',
@@ -41,7 +41,7 @@ addStrings({
       <p>After two minutes, blocks fall from the outside in. Don't get squashed. If the last players go down together, the round is a draw.</p>`,
   },
   de: {
-    'game.bomber': 'Bomb Party',
+    'game.bomber': 'Bomber Buben',
     'bomber.rotate': 'Halte dein Handy quer, um zu spielen',
     'bomber.ready': 'Bereit?',
     'bomber.go': 'LOS!',

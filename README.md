@@ -1,7 +1,7 @@
 # Games with Friends ♥♠
 
 Touch-first games to play with friends in the browser: **Rommé** (German
-rummy), **UNO**, **Monopoly Deal** and the real-time arena game **Bomb Party**. Players connect **peer-to-peer over WebRTC**; ICE (STUN/TURN) finds the path
+rummy), **UNO**, **Monopoly Deal** and the real-time arena game **Bomber Buben**. Players connect **peer-to-peer over WebRTC**; ICE (STUN/TURN) finds the path
 between browsers, so game traffic never goes through a server.
 
 - **Game client:** static HTML/CSS/JS in [`public/`](public/). No build step, no
@@ -19,7 +19,7 @@ host can still switch in the lobby.
 | --- | --- | --- |
 | **Rommé** | 2–6 | German rummy: sets and runs, 40 to come out, cutting the deck, Hand ×2, majority vote between rounds |
 | **UNO** | 2–8 | Match color/number/symbol, Skip/Reverse/+2/Wild/Wild +4, call UNO or get caught (+2), first to 500 |
-| **Bomb Party** | 1–4 | Real-time bomb battle in the classic 15×13 arena, best of 3; on-screen D-pad with A/B (hold the phone sideways) or keyboard; items: bomb up, fire up, full fire, skate, kick, remote, skull; falling blocks after 2 minutes |
+| **Bomber Buben** | 1–4 | Real-time bomb battle in the classic 15×13 arena, best of 3; on-screen D-pad with A/B (hold the phone sideways) or keyboard; items: bomb up, fire up, full fire, skate, kick, remote, skull; falling blocks after 2 minutes |
 | **Monopoly Deal** | 2–5 | Three complete property sets win; real street names (US/German edition by language), tap any card or set for its rent ladder; rent, Debt Collector, Birthday, Sly/Forced Deal, Deal Breaker, Just Say No, houses/hotels |
 
 Every game runs on the host's browser, has bots, works in German and English, and
@@ -79,7 +79,7 @@ This is a private fan implementation with its own card designs.
 | `public/js/games/index.js` | Registry of the games (engine, bot, rules, player limits) |
 | `public/js/games/uno/` | UNO: engine, bot, screen, texts |
 | `public/js/games/deal/` | Monopoly Deal: cards, engine, bot, screen, texts |
-| `public/js/games/bomber/` | Bomb Party: 60 Hz engine, bot, canvas screen with touch controls, texts |
+| `public/js/games/bomber/` | Bomber Buben: 60 Hz engine, bot, canvas screen with touch controls, texts |
 | `public/js/ui-kit.js` | Choice and multi-select sheets used by the game screens |
 | `public/js/i18n.js` | German and English texts, language detection |
 | `public/js/voice.js` | Push-to-talk recording, chunking and playback |

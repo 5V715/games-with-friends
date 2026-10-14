@@ -921,7 +921,7 @@ dialog.sheet > .btn { width: 100%; }
   .btn.hint { animation: hint 2.2s ease-in-out infinite !important; }
 }
 
-/* ---------------------------------------------------------------- Bomb Party */
+/* ---------------------------------------------------------------- Bomber Buben */
 
 #screen-play[data-game="bomber"] { position: relative; }
 #screen-play[data-game="bomber"] .opponents,

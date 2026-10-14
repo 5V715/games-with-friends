@@ -1,4 +1,4 @@
-// Bomb Party screen: canvas arena with our own pixel art, a HUD, an on-screen
+// Bomber Buben screen: canvas arena with our own pixel art, a HUD, an on-screen
 // D-pad with A/B buttons (plus keyboard), and overlays for countdown and results.
 //
 // Frames come from the host ~20×/s (60×/s on the host itself); positions are
