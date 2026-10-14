@@ -427,7 +427,7 @@ export function createBomberUI(ctx) {
       <div class="bm-hud"></div>
       <div class="bm-pad" aria-label="D-pad"><span class="bm-arrow u">▲</span><span class="bm-arrow l">◀</span><span class="bm-arrow r">▶</span><span class="bm-arrow d">▼</span></div>
       <div class="bm-stage"><canvas width="${W * CELL}" height="${H * CELL}"></canvas><div class="bm-overlay"></div></div>
-      <div class="bm-btns">
+      <div class="bm-btns" data-ptt-slot>
         <button class="bm-btn b" aria-label="B"><span>B</span><small>${esc(t('bomber.b'))}</small></button>
         <button class="bm-btn a" aria-label="A"><span>A</span><small>${esc(t('bomber.a'))}</small></button>
       </div>

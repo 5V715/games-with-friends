@@ -1009,6 +1009,16 @@ dialog.sheet > .btn { width: 100%; }
 .bm-btn small { font-size: 10px; font-weight: 600; opacity: .85; }
 .bm-btn.a { right: 0; top: 10%; background: #d8343a; }
 .bm-btn.b { left: 0; bottom: 10%; background: #d8a31c; color: #2a1d00; }
+/* Push to talk joins A and B in the same size (only shown when playing online). */
+.bm-btns:has(> .ptt:not([hidden])) { aspect-ratio: 1 / 1.3; width: min(34vh, 26vw, 190px); }
+.bm-btns:has(> .ptt:not([hidden])) .bm-btn.a { top: 25%; }
+.bm-btns:has(> .ptt:not([hidden])) .bm-btn.b { top: 50%; bottom: auto; }
+.bm-btns > .btn.ptt {
+  position: absolute; left: 0; top: 0; width: 50%; height: auto; aspect-ratio: 1; min-height: 0; padding: 0; flex: none;
+  border-radius: 50%; border: 0; background: #3b4660; font-size: 26px;
+  box-shadow: inset 0 -5px 0 #0005, 0 3px 8px #0008;
+}
+.bm-btns > .btn.ptt.recording { transform: none; background: var(--danger); box-shadow: 0 0 0 6px rgba(226, 87, 76, .35); }
 .bm-btn.down { transform: translateY(2px) scale(.95); box-shadow: inset 0 -2px 0 #0005; filter: brightness(1.15); }
 
 .bm-rotate {

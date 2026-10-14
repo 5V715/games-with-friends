@@ -311,7 +311,13 @@ function renderPlay(v) {
   show('play');
   closeDialog('dlg-invite');
   const api = playUI(v.game);
+  // Push to talk sits in the footer, unless the game screen offers a slot
+  // for it (Bomber Buben: next to the A/B buttons).
+  const ptt = $('#btn-ptt2');
+  const footer = $('#screen-play .actions');
+  if (ptt.parentElement !== footer) footer.append(ptt);
   api.render(v);
+  $('#play-main [data-ptt-slot]')?.append(ptt);
   renderResult(v, api.result(v));
 }
 
