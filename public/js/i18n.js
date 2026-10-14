@@ -87,6 +87,7 @@ const STRINGS = {
     // ---- home
     'game.romme': 'Rommé',
     'home.tagline': 'Rommé, UNO, Monopoly Deal and Bomber Buben with your friends — browser to browser, no account needed.',
+    'home.source': 'Source code on GitHub',
     'home.pickGame': 'Choose a game',
     'home.name': 'Your name',
     'home.namePh': 'Name',
@@ -354,6 +355,7 @@ const STRINGS = {
 
     'game.romme': 'Rommé',
     'home.tagline': 'Rommé, UNO, Monopoly Deal und Bomber Buben mit Freunden — direkt von Browser zu Browser, ohne Konto.',
+    'home.source': 'Quellcode auf GitHub',
     'home.pickGame': 'Wähle ein Spiel',
     'home.name': 'Dein Name',
     'home.namePh': 'Name',

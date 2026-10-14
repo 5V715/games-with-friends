@@ -176,6 +176,11 @@ input:focus, textarea:focus, select:focus { outline: 2px solid var(--accent); ou
 
 .home-links { display: flex; justify-content: center; gap: 8px; flex-wrap: wrap; }
 .server-note { font-size: 13px; color: var(--ink-dim); text-align: center; margin: 0; }
+.repo-link {
+  display: inline-flex; align-items: center; gap: 6px; align-self: center; margin-top: 4px; padding: 6px 10px;
+  font-size: 12px; color: var(--ink-dim); text-decoration: none; opacity: .65; border-radius: 999px;
+}
+.repo-link:hover, .repo-link:focus-visible { opacity: 1; color: var(--ink); }
 
 /* ---------- Lobby ---------- */
 
