@@ -1203,6 +1203,7 @@ const JOIN_ERRORS = {
 async function joinOnline(room, { quiet = false } = {}) {
   room = String(room || '').trim().toUpperCase();
   if (!/^[A-Z0-9]{4,8}$/.test(room)) return toast(t('toast.enterCode'), { error: true });
+  $('#btn-join').classList.remove('hint');
   const config = await getNetConfig();
   if (!config.signaling) return toast(t('toast.noSignalJoin'), { error: true });
   ui.mode = 'online';
@@ -1425,11 +1426,18 @@ function bind() {
     $('#room-input').value = room.toUpperCase();
     // A guest who reloads the page rejoins their seat automatically.
     if (store('session', 'romme.activeRoom') === room.toUpperCase()) setTimeout(() => joinOnline(room), 0);
-    else setTimeout(() => ($('#name').value ? $('#btn-join') : $('#name')).focus(), 50);
+    else {
+      setTimeout(() => ($('#name').value ? $('#btn-join') : $('#name')).focus(), 50);
+      // Invited by link: show where to tap.
+      $('#btn-join').classList.add('hint');
+    }
   }
 
   $('#btn-host').onclick = hostOnline;
   $('#btn-join').onclick = () => joinOnline($('#room-input').value);
+  $('#room-input').addEventListener('input', () => {
+    if (!$('#room-input').value.trim()) $('#btn-join').classList.remove('hint');
+  });
   $('#room-input').addEventListener('keydown', (e) => { if (e.key === 'Enter') joinOnline($('#room-input').value); });
   $('#btn-practice').onclick = startPractice;
   $('#btn-manual-join').onclick = () => {
