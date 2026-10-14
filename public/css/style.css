@@ -917,6 +917,8 @@ dialog.sheet > .btn { width: 100%; }
 
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { animation: none !important; transition: none !important; }
+  /* The join hint only changes color and glow, so it may keep running. */
+  .btn.hint { animation: hint 2.2s ease-in-out infinite !important; }
 }
 
 /* ---------------------------------------------------------------- Bomb Party */
