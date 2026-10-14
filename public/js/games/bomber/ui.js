@@ -3,8 +3,13 @@
 //
 // Frames come from the host ~20×/s (60×/s on the host itself); positions are
 // interpolated between the last two frames so movement stays smooth.
+//
+// A guest predicts its own player: it runs the same movement code locally at
+// 60 Hz, draws itself at that position right away and reports it to the host,
+// which checks it. If the host disagrees (the `fix` counter changes) the guest
+// snaps back to the host's position.
 
-import { W, H, ITEMS } from './engine.js';
+import { W, H, ITEMS, TPS, DIRS, REVERSE, stepPlayer, speedOf } from './engine.js';
 import { esc } from '../../ui-kit.js';
 
 const T = 16; // pixels per cell in the sprites
@@ -249,7 +254,18 @@ export function createBomberUI(ctx) {
   let padDir = null;
   let lastSent = '';
 
+  // Own player as predicted locally (guests only).
+  const me = { x: 0, y: 0, facing: 'd', moving: false, fix: -1, on: false, pass: new Set() };
+  let simAt = 0, simTicks = 0;
+  try {
+    if (localStorage.getItem('bomber.debug')) window.bomberDebug = { me, frame: () => cur, view: () => view };
+  } catch { /* storage blocked */ }
+
   // ---- input ----
+  function payload() {
+    return me.on ? { ...state, x: Math.round(me.x * 1000) / 1000, y: Math.round(me.y * 1000) / 1000, fix: me.fix } : { ...state };
+  }
+
   function send() {
     const order = [...keys].reverse();
     const keyDir = order.find(k => ['u', 'd', 'l', 'r'].includes(k)) || null;
@@ -257,7 +273,75 @@ export function createBomberUI(ctx) {
     const key = `${state.d}|${state.a}|${state.b}`;
     if (key === lastSent) return;
     lastSent = key;
-    input({ ...state });
+    if (me.on) simulate(performance.now()); // move up to now before reporting
+    input(payload());
+  }
+
+  // ---- prediction ----
+  const myIndex = () => (view ? view.players.findIndex(p => p.id === view.you) : -1);
+  const cellKey = (x, y) => x + ',' + y;
+  const overlaps = (bx, by) => Math.abs(me.x - bx - 0.5) < 0.95 && Math.abs(me.y - by - 0.5) < 0.95;
+
+  function canPredict(f) {
+    const i = myIndex();
+    return !ctx.isHost() && view?.phase === 'play' && f && f.t > 0 && i >= 0 && f.p[i]?.[2] === 1;
+  }
+
+  // New frame: start, keep or correct the prediction.
+  function reconcile(f, old) {
+    if (!canPredict(f)) { me.on = false; return; }
+    const s = f.p[myIndex()];
+    const far = Math.abs(s[0] - me.x) + Math.abs(s[1] - me.y) > 3;
+    if (!me.on || s[12] !== me.fix || far) {
+      me.x = s[0];
+      me.y = s[1];
+      me.facing = s[3] || 'd';
+      me.fix = s[12];
+      me.pass = new Set(f.b.filter(b => overlaps(Math.round(b[0]), Math.round(b[1]))).map(b => cellKey(Math.round(b[0]), Math.round(b[1]))));
+      simAt = performance.now();
+      me.on = true;
+      return;
+    }
+    // A bomb that appears under us (usually our own) can be walked off.
+    const before = new Set((old?.b || []).map(b => cellKey(Math.round(b[0]), Math.round(b[1]))));
+    for (const b of f.b) {
+      const bx = Math.round(b[0]), by = Math.round(b[1]);
+      if (!before.has(cellKey(bx, by)) && overlaps(bx, by)) me.pass.add(cellKey(bx, by));
+    }
+  }
+
+  function freeCell(x, y) {
+    if (x < 0 || y < 0 || x >= W || y >= H) return false;
+    const ch = cur.grid[y * W + x];
+    if (ch === '#' || ch === '+' || ch === '*') return false;
+    const key = cellKey(x, y);
+    if (me.pass.has(key)) return true;
+    return !cur.b.some(b => Math.round(b[0]) === x && Math.round(b[1]) === y);
+  }
+
+  function simulate(now) {
+    if (!me.on) return;
+    const steps = Math.min(10, Math.floor((now - simAt) / (1000 / TPS)));
+    if (steps <= 0) return;
+    simAt += steps * (1000 / TPS);
+    if (now - simAt > 200) simAt = now;
+    const s = cur.p[myIndex()];
+    const disease = s[6], skates = s[9];
+    for (let n = 0; n < steps; n++) {
+      let d = state.d;
+      if (d && disease === 'reverse') d = REVERSE[d];
+      me.moving = false;
+      if (d) {
+        me.facing = d;
+        stepPlayer(me, DIRS[d], speedOf(skates, disease), freeCell);
+      }
+      for (const key of [...me.pass]) {
+        const [bx, by] = key.split(',').map(Number);
+        if (!overlaps(bx, by)) me.pass.delete(key);
+      }
+      // Report the position every other tick.
+      if (++simTicks % 2 === 0) input(payload());
+    }
   }
 
   function press(btn) {
@@ -375,6 +459,7 @@ export function createBomberUI(ctx) {
     prev = cur;
     cur = f;
     curAt = now;
+    reconcile(f, prev);
     for (const ev of f.e || []) sound.play(ev);
     if (!raf) raf = requestAnimationFrame(draw);
   }
@@ -385,6 +470,7 @@ export function createBomberUI(ctx) {
     raf = 0;
     if (!active() || !cur) return;
     raf = requestAnimationFrame(draw);
+    simulate(performance.now());
     const k = prev ? Math.min(1, (performance.now() - curAt) / interval) : 1;
     const f = cur;
     const g = g2;
@@ -439,10 +525,13 @@ export function createBomberUI(ctx) {
     for (const i of order) {
       const p = f.p[i];
       const o = prev?.p?.[i];
-      const [x, y, alive, facing, moving, deadFor] = p;
+      let [x, y, alive, facing, moving, deadFor] = p;
       if (!alive && deadFor > 70) continue;
-      const px = o && Math.abs(o[0] - x) < 1.5 && Math.abs(o[1] - y) < 1.5 ? lerp(o[0], x, k) : x;
-      const py = o && Math.abs(o[0] - x) < 1.5 && Math.abs(o[1] - y) < 1.5 ? lerp(o[1], y, k) : y;
+      let px = o && Math.abs(o[0] - x) < 1.5 && Math.abs(o[1] - y) < 1.5 ? lerp(o[0], x, k) : x;
+      let py = o && Math.abs(o[0] - x) < 1.5 && Math.abs(o[1] - y) < 1.5 ? lerp(o[1], y, k) : y;
+      if (me.on && i === myIndex()) {
+        px = me.x; py = me.y; facing = me.facing; moving = me.moving;
+      }
       const step = moving ? 1 + ((f.n >> 3) % 2) : 0;
       const slot = view?.players?.[i]?.slot ?? i;
       const img = sprites.players[slot % 4][facing || 'd'][step];

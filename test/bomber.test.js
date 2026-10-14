@@ -91,3 +91,47 @@ test('bots finish a best-of-3 match', () => {
     console.log(`match ${run}: ${g.round} rounds, ${Math.round(ticks / 60)} s`, g.history.map(h => h.winner || 'draw').join(' '));
   }
 });
+
+test('guest position reports: accepted when reachable, rejected otherwise', () => {
+  const g = emptyArena();
+  const p = g.player('p0');
+  const fix = p.fix;
+  // Walk right in small reported steps (the host's budget grows each tick).
+  g.tick(); g.tick();
+  let x = p.x;
+  for (let i = 0; i < 20; i++) {
+    x += g.speed(p) * 2;
+    g.setInput('p0', { d: 'r', x, y: p.y, fix });
+    g.tick(); g.tick();
+  }
+  assert.ok(Math.abs(p.x - x) < 1e-9, 'host took the reported position');
+  assert.equal(p.fix, fix);
+  // Teleporting is refused and bumps the fix counter.
+  g.setInput('p0', { d: 'r', x: x + 4, y: p.y, fix });
+  g.tick();
+  assert.ok(Math.abs(p.x - x) < 1e-9);
+  assert.equal(p.fix, fix + 1);
+  // Reports made before the guest saw the correction are ignored.
+  g.setInput('p0', { d: 'r', x: x + 0.05, y: p.y, fix });
+  g.tick();
+  assert.ok(p.x - x < 0.06);
+  // Walking into a pillar is refused.
+  p.x = 1.5; p.y = 1.5;
+  g.setInput('p0', { d: 'd', x: 2.5, y: 2.5, fix: p.fix });
+  for (let i = 0; i < 30; i++) g.tick();
+  assert.equal(Math.floor(p.x) === 2 && Math.floor(p.y) === 2, false);
+});
+
+test('a bomb dropped with a position report lands at that position', () => {
+  const g = emptyArena();
+  const p = g.player('p0');
+  g.setInput('p0', { a: 0, x: p.x, y: p.y, fix: p.fix });
+  g.tick();
+  const x = p.x + 0.6; // next cell
+  for (let i = 0; i < 12; i++) { g.setInput('p0', { d: 'r', a: 0, x: p.x + 0.05, y: p.y, fix: p.fix }); g.tick(); }
+  assert.ok(p.x >= x - 0.01);
+  g.setInput('p0', { d: null, a: 1, x: p.x, y: p.y, fix: p.fix });
+  g.tick();
+  assert.equal(g.bombs.length, 1);
+  assert.equal(g.bombs[0].x, Math.floor(p.x));
+});

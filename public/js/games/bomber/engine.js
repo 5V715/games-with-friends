@@ -33,6 +33,8 @@ const END_DELAY = 90; // wait a moment before declaring the winner (draws)
 const RESULT_TICKS = 210;
 const DISEASE_TICKS = 600;
 const KICK_SPEED = 0.2; // cells per tick
+const CLAIM_SLACK = 20; // ticks of movement a late position report may catch up
+const CLAIM_TIMEOUT = 30; // no report for this long: simulate from input again
 const BASE_SPEED = 3.2 / TPS;
 const SKATE_SPEED = 0.55 / TPS;
 const MAX_SKATES = 4;
@@ -47,8 +49,8 @@ const ITEM_POOL = { B: 10, F: 10, S: 5, K: 3, R: 2, X: 1, D: 3 };
 export const DISEASES = ['slow', 'fast', 'short', 'noBomb', 'diarrhea', 'reverse'];
 
 export const STARTS = [[1, 1], [13, 11], [13, 1], [1, 11]];
-const DIRS = { u: [0, -1], d: [0, 1], l: [-1, 0], r: [1, 0] };
-const REVERSE = { u: 'd', d: 'u', l: 'r', r: 'l' };
+export const DIRS = { u: [0, -1], d: [0, 1], l: [-1, 0], r: [1, 0] };
+export const REVERSE = { u: 'd', d: 'u', l: 'r', r: 'l' };
 
 const fail = (key, params) => { throw new GameError(key, params); };
 const idx = (x, y) => y * W + x;
@@ -67,6 +69,67 @@ export function spiral() {
   return out;
 }
 const SPIRAL = spiral();
+
+export function speedOf(skates, disease) {
+  if (disease === 'slow') return 1.6 / TPS;
+  if (disease === 'fast') return 7 / TPS;
+  return BASE_SPEED + skates * SKATE_SPEED;
+}
+
+// Grid movement with automatic alignment and corner sliding. Shared by the
+// host's simulation and the guest's prediction of its own player.
+// `free(x, y)` says whether a cell can be entered. Returns the cell in front
+// when the player stands blocked in the middle of a cell (for kicking).
+export function stepPlayer(p, [dx, dy], dist, free) {
+  const cx = Math.floor(p.x), cy = Math.floor(p.y);
+  // Main axis a (moving), cross axis c.
+  const horiz = dx !== 0;
+  const s = horiz ? dx : dy;
+  const a = horiz ? 'x' : 'y', c = horiz ? 'y' : 'x';
+  const ca = horiz ? cx : cy, cc = horiz ? cy : cx;
+  const cell = (main, cross) => (horiz ? [main, cross] : [cross, main]);
+  const freeAt = (main, cross) => free(...cell(main, cross));
+  const off = p[c] - (cc + 0.5);
+  const centerA = ca + 0.5;
+  const ahead = freeAt(ca + s, cc);
+  p.moving = false;
+
+  if (Math.abs(off) > 0.001) {
+    const side = Math.sign(off);
+    if (ahead) {
+      // Line up with the row first, then go on.
+      const m = Math.min(dist, Math.abs(off));
+      p[c] -= side * m;
+      dist -= m;
+    } else if (Math.abs(off) > 0.18 && freeAt(ca + s, cc + side) && freeAt(ca, cc + side)) {
+      // Slide around the corner of a block.
+      const target = cc + side + 0.5;
+      const m = Math.min(dist, Math.abs(target - p[c]));
+      p[c] += side * m;
+      p.moving = m > 0;
+      return null;
+    } else {
+      const m = Math.min(dist, Math.abs(off));
+      p[c] -= side * m;
+      dist -= m;
+      p.moving = m > 0;
+    }
+    if (dist <= 0) { p.moving = true; return null; }
+  }
+
+  if (ahead) {
+    p[a] += s * dist;
+    p.moving = true;
+    return null;
+  }
+  // Blocked: walk up to the middle of the cell.
+  const before = s > 0 ? p[a] < centerA : p[a] > centerA;
+  if (before) {
+    p[a] = s > 0 ? Math.min(centerA, p[a] + dist) : Math.max(centerA, p[a] - dist);
+    p.moving = true;
+  }
+  return Math.abs(p[a] - centerA) < 0.05 ? cell(ca + s, cc) : null;
+}
 
 export function baseGrid() {
   const g = new Array(W * H).fill(EMPTY);
@@ -122,7 +185,7 @@ export class BomberGame {
     if (this.phase !== 'lobby') fail('err.gameStarted');
     if (this.players.length >= MAX_PLAYERS) fail('err.tableFull');
     if (this.player(id)) return this.player(id);
-    const p = { id, name: String(name || 'Player').slice(0, 20), bot, wins: 0, input: { d: null }, inA: undefined, inB: undefined };
+    const p = { id, name: String(name || 'Player').slice(0, 20), bot, wins: 0, input: { d: null }, inA: undefined, inB: undefined, fix: 0 };
     this.players.push(p);
     return p;
   }
@@ -179,7 +242,7 @@ export class BomberGame {
       Object.assign(p, {
         slot: n, x: x + 0.5, y: y + 0.5, alive: true, diedAt: null, facing: 'd', moving: false,
         bombs: 1, fire: 2, skates: 0, kick: false, remote: false, disease: null, diseaseLeft: 0,
-        input: { d: null },
+        input: { d: null }, claim: null, budget: 0, fix: (p.fix || 0) + 1,
       });
     });
     this.changed = true;
@@ -203,6 +266,11 @@ export class BomberGame {
     p.inA = a;
     p.inB = b;
     p.input = { d, a: p.input.a || pa, b: p.input.b || pb };
+    // Position from the guest's prediction (checked in the next tick).
+    const x = Number(inp.x), y = Number(inp.y);
+    if (inp.x != null && Number.isFinite(x) && Number.isFinite(y) && (inp.fix | 0) === p.fix) {
+      p.claim = { x, y, at: this.tickNo, used: false };
+    }
   }
 
   // Direct input for bots: { d, bomb, special }.
@@ -215,7 +283,7 @@ export class BomberGame {
   // After a reconnect the press counters start from zero again.
   resetInput(pid) {
     const p = this.player(pid);
-    if (p) { p.inA = undefined; p.inB = undefined; p.input = { d: null }; }
+    if (p) { p.inA = undefined; p.inB = undefined; p.input = { d: null }; p.claim = null; }
   }
 
   apply(playerId, action) {
@@ -250,9 +318,7 @@ export class BomberGame {
   }
 
   speed(p) {
-    if (p.disease === 'slow') return 1.6 / TPS;
-    if (p.disease === 'fast') return 7 / TPS;
-    return BASE_SPEED + p.skates * SKATE_SPEED;
+    return speedOf(p.skates, p.disease);
   }
 
   tick() {
@@ -278,15 +344,27 @@ export class BomberGame {
   }
 
   #movePlayer(p) {
-    // The bomb goes where you stand before this tick's step.
-    const wantBomb = p.input.a || p.disease === 'diarrhea';
-    if (wantBomb && p.disease !== 'noBomb') this.#placeBomb(p);
     let d = p.input.d;
     if (d && p.disease === 'reverse') d = REVERSE[d];
+    const wantBomb = (p.input.a || p.disease === 'diarrhea') && p.disease !== 'noBomb';
     p.moving = false;
-    if (d) {
-      p.facing = d;
-      this.#step(p, DIRS[d], this.speed(p));
+    // Budget for how far a guest's own prediction may move the player.
+    p.budget = Math.min((p.budget || 0) + this.speed(p), this.speed(p) * CLAIM_SLACK);
+    if (p.claim && this.tickNo - p.claim.at <= CLAIM_TIMEOUT) {
+      // Predicted by the guest: take the reported position, then drop the
+      // bomb there, where the guest saw its player when pressing A.
+      if (d) p.facing = d;
+      this.#applyClaim(p);
+      if (wantBomb) this.#placeBomb(p);
+      if (d && p.kick) this.#kick(p, d);
+    } else {
+      // The bomb goes where you stand before this tick's step.
+      if (wantBomb) this.#placeBomb(p);
+      if (d) {
+        p.facing = d;
+        const front = stepPlayer(p, DIRS[d], this.speed(p), (x, y) => this.free(x, y, p));
+        if (front && p.kick) this.#kickAt(p, d, front);
+      }
     }
     // Leaving a bomb's cell: from now on it blocks this player too.
     for (const b of this.bombs) {
@@ -297,64 +375,49 @@ export class BomberGame {
     if (p.disease && --p.diseaseLeft <= 0) p.disease = null;
   }
 
-  // Grid movement with automatic alignment and corner sliding.
-  #step(p, [dx, dy], dist) {
-    const cx = Math.floor(p.x), cy = Math.floor(p.y);
-    // Main axis a (moving), cross axis c.
-    const horiz = dx !== 0;
-    const s = horiz ? dx : dy;
-    const a = horiz ? 'x' : 'y', c = horiz ? 'y' : 'x';
-    const ca = horiz ? cx : cy, cc = horiz ? cy : cx;
-    const cell = (main, cross) => (horiz ? [main, cross] : [cross, main]);
-    const freeAt = (main, cross) => this.free(...cell(main, cross), p);
-    const off = p[c] - (cc + 0.5);
-    const centerA = ca + 0.5;
-    const ahead = freeAt(ca + s, cc);
-
-    if (Math.abs(off) > 0.001) {
-      const side = Math.sign(off);
-      if (ahead) {
-        // Line up with the row first, then go on.
-        const m = Math.min(dist, Math.abs(off));
-        p[c] -= side * m;
-        dist -= m;
-      } else if (Math.abs(off) > 0.18 && freeAt(ca + s, cc + side) && freeAt(ca, cc + side)) {
-        // Slide around the corner of a block.
-        const target = cc + side + 0.5;
-        const m = Math.min(dist, Math.abs(target - p[c]));
-        p[c] += side * m;
-        p.moving = m > 0;
-        return;
-      } else {
-        const m = Math.min(dist, Math.abs(off));
-        p[c] -= side * m;
-        dist -= m;
-        p.moving = m > 0;
-      }
-      if (dist <= 0) { p.moving = true; return; }
-    }
-
-    if (ahead) {
-      p[a] += s * dist;
-      p.moving = true;
+  // A guest moves its own player locally and reports the position. Accept it
+  // if it is reachable: within the speed budget, into a free neighbouring cell.
+  // Otherwise keep the host's position and bump `fix`, so the guest snaps back.
+  #applyClaim(p) {
+    const c = p.claim;
+    if (c.used) {
+      // Reports come every other tick; keep the walking animation in between.
+      p.moving = c.moved && this.tickNo - c.at < 4;
       return;
     }
-    // Blocked: walk up to the middle of the cell, maybe kick a bomb.
-    const before = s > 0 ? p[a] < centerA : p[a] > centerA;
-    if (before) {
-      p[a] = s > 0 ? Math.min(centerA, p[a] + dist) : Math.max(centerA, p[a] - dist);
-      p.moving = true;
+    c.used = true;
+    const dist = Math.abs(c.x - p.x) + Math.abs(c.y - p.y);
+    const fx = Math.floor(p.x), fy = Math.floor(p.y);
+    const tx = Math.floor(c.x), ty = Math.floor(c.y);
+    const near = Math.abs(tx - fx) + Math.abs(ty - fy) <= 1;
+    const ok = dist <= p.budget + 0.02 && near && ((tx === fx && ty === fy) || this.free(tx, ty, p));
+    if (!ok) {
+      p.fix++;
+      p.claim = null;
+      return;
     }
-    if (p.kick && Math.abs(p[a] - centerA) < 0.05) {
-      const [bx, by] = cell(ca + s, cc);
-      const b = this.bombAt(bx, by);
-      if (b && !b.slide && !b.passers.has(p.id)) {
-        b.slide = horiz ? [dx, 0] : [0, dy];
-        b.progress = 0;
-        b.kickedBy = p.id;
-        this.events.push('kick');
-      }
-    }
+    p.moving = c.moved = dist > 0.001;
+    p.budget -= dist;
+    p.x = c.x;
+    p.y = c.y;
+  }
+
+  // Kicking for players moved by their own prediction: standing in the middle
+  // of a cell and pushing against a bomb.
+  #kick(p, d) {
+    const [dx, dy] = DIRS[d];
+    const cx = Math.floor(p.x), cy = Math.floor(p.y);
+    if (Math.abs(p.x - cx - 0.5) > 0.08 || Math.abs(p.y - cy - 0.5) > 0.08) return;
+    this.#kickAt(p, d, [cx + dx, cy + dy]);
+  }
+
+  #kickAt(p, d, [bx, by]) {
+    const b = this.bombAt(bx, by);
+    if (!b || b.slide || b.passers.has(p.id)) return;
+    b.slide = DIRS[d].slice();
+    b.progress = 0;
+    b.kickedBy = p.id;
+    this.events.push('kick');
   }
 
   #placeBomb(p) {
@@ -568,7 +631,7 @@ export class BomberGame {
       grid,
       p: this.players.map(p => [r2(p.x), r2(p.y), p.alive ? 1 : 0, p.facing, p.moving ? 1 : 0,
         p.diedAt == null ? 0 : this.tickNo - p.diedAt, p.disease || '',
-        p.bombs, p.fire, p.skates, p.kick ? 1 : 0, p.remote ? 1 : 0]),
+        p.bombs, p.fire, p.skates, p.kick ? 1 : 0, p.remote ? 1 : 0, p.fix]),
       b: this.bombs.map(b => [r2(b.x + (b.slide ? b.slide[0] * b.progress : 0)), r2(b.y + (b.slide ? b.slide[1] * b.progress : 0)), b.fuse, b.remote ? 1 : 0]),
       f: [...this.flames].map(([i, n]) => [i, n]),
       e: this.events,

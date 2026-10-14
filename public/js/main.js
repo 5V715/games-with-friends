@@ -276,6 +276,7 @@ function playUI(type) {
         t, msg, toast, buzz,
         act: (a) => act(a),
         input: (inp) => ui.session?.input?.(inp),
+        isHost: () => !!ui.session?.isHost,
         speaking: () => ui.speaking,
         dotClass: (p) => (p.id === ui.view.you && !ui.session.isHost ? linkDotClass() : dotClass(p)),
         fitHand: (hand) => fitCards(hand),
