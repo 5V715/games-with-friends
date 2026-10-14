@@ -7,7 +7,7 @@
   <meta name="mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-  <title>Rommé</title>
+  <title>Games with Friends</title>
   <link rel="manifest" href="manifest.webmanifest">
   <link rel="icon" href="icon.svg" type="image/svg+xml">
   <link rel="stylesheet" href="css/style.css">
@@ -18,7 +18,12 @@
     <!-- Home -->
     <section id="screen-home" class="screen active">
       <div class="home-card">
-        <h1 class="logo"><span class="suit red">♥</span>Rommé<span class="suit">♠</span></h1>
+        <div class="title-cards" aria-hidden="true">
+          <span class="tc tc-romme"><b>A</b><i>♥</i></span>
+          <span class="tc tc-uno"><span>+2</span></span>
+          <span class="tc tc-deal"><em></em><b>3M</b></span>
+        </div>
+        <h1 class="logo">Games <small>with Friends</small></h1>
         <p class="tagline" data-i18n="home.tagline">Play rummy with friends — browser to browser, no account needed.</p>
 
         <label class="field">
@@ -26,6 +31,7 @@
           <input id="name" type="text" maxlength="20" autocomplete="nickname" placeholder="Name" data-i18n-ph="home.namePh">
         </label>
 
+        <span class="pick-label" data-i18n="home.pickGame">Choose a game</span>
         <div class="game-pick" id="game-pick" role="radiogroup" aria-label="Game"></div>
 
         <button class="btn primary big" id="btn-host" data-i18n="home.create">Create table</button>

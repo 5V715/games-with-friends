@@ -1,7 +1,7 @@
 {
-  "name": "romme-signaling",
+  "name": "games-with-friends",
   "version": "1.0.0",
-  "description": "WebRTC signaling relay for the Rommé card game",
+  "description": "WebRTC signaling relay for Games with Friends",
   "type": "module",
   "private": true,
   "main": "server.js",

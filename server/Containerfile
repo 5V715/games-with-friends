@@ -1,12 +1,13 @@
-# OCI image for the Rommé signaling server (no npm dependencies).
+# OCI image for the Games with Friends signaling server (no npm dependencies).
 # It also serves the game itself (public/) unless SERVE_GAME=false.
 # Build from the repository root:
-#   podman build -t romme-signaling -f server/Containerfile .
-#   docker build -t romme-signaling -f server/Containerfile .
+#   podman build -t games-with-friends -f server/Containerfile .
+#   docker build -t games-with-friends -f server/Containerfile .
 FROM docker.io/library/node:22-alpine
 
-LABEL org.opencontainers.image.title="romme-signaling" \
-      org.opencontainers.image.description="Rommé card game: WebRTC signaling relay and the game's web page" \
+LABEL org.opencontainers.image.title="games-with-friends" \
+      org.opencontainers.image.description="Games with Friends (Rommé, UNO, Monopoly Deal): WebRTC signaling relay and the game page" \
+      org.opencontainers.image.source="https://github.com/5V715/games-with-friends" \
       org.opencontainers.image.licenses="MIT"
 
 ENV NODE_ENV=production \

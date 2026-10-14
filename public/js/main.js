@@ -1422,7 +1422,7 @@ function bind() {
   $('#btn-share').onclick = async () => {
     const url = roomUrl(ui.room);
     if (navigator.share) {
-      try { await navigator.share({ title: 'Rommé', text: t('lobby.shareText', { room: ui.room }), url }); return; } catch { /* cancelled */ }
+      try { await navigator.share({ title: 'Games with Friends', text: t('lobby.shareText', { room: ui.room }), url }); return; } catch { /* cancelled */ }
     }
     copyText(url);
   };

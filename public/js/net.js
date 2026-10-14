@@ -90,7 +90,7 @@ async function probeServer(base) {
 }
 
 // Returns { base, signaling, iceServers, relayOnly }.
-// The page's own directory, e.g. https://host/ or https://host/romme.
+// The page's own directory, e.g. https://host/ or https://host/games-with-friends.
 function pageBase() {
   return /^https?:$/.test(location.protocol) ? new URL('.', location.href).href.replace(/\/+$/, '') : '';
 }

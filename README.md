@@ -1,7 +1,7 @@
-# Rommé ♥♠
+# Games with Friends ♥♠
 
-A touch-first, browser-based **Rommé** (German rummy) card game for 2–6 players.
-Players connect **peer-to-peer over WebRTC**; ICE (STUN/TURN) finds the path
+Touch-first card games to play with friends in the browser: **Rommé** (German
+rummy), **UNO** and **Monopoly Deal**. Players connect **peer-to-peer over WebRTC**; ICE (STUN/TURN) finds the path
 between browsers, so game traffic never goes through a server.
 
 - **Game client:** static HTML/CSS/JS in [`public/`](public/). No build step, no
@@ -101,7 +101,7 @@ On a phone on the same network, use your computer's IP address instead of `local
 
 1. Under **Settings → Pages**, set **Source: GitHub Actions**.
 2. Optional: under **Settings → Secrets and variables → Actions → Variables**, add
-   `SIGNALING_URL` with your signaling server's URL (for example `https://romme-signal.example.com`).
+   `SIGNALING_URL` with your signaling server's URL (for example `https://games-signal.example.com`).
 3. Push to `main`. [`.github/workflows/pages.yml`](.github/workflows/pages.yml) writes
    `config.js` and publishes `public/`.
 
@@ -113,15 +113,15 @@ Players can also point the game at a server with `?signal=https://…` or in
 
 [`.github/workflows/server-image.yml`](.github/workflows/server-image.yml) builds a
 multi-arch (amd64, arm64 and arm/v7 – e.g. Raspberry Pi with 64- or 32-bit OS) OCI image and pushes it to
-`ghcr.io/<owner>/romme-signaling` on every push to `main` and for `v*` tags.
+`ghcr.io/<owner>/games-with-friends` on every push to `main` and for `v*` tags.
 
 Build and run it yourself:
 
 ```sh
-docker build -t romme-signaling -f server/Containerfile .   # from the repo root; or: podman build …
+docker build -t games-with-friends -f server/Containerfile .   # from the repo root; or: podman build …
 docker run -p 8080:8080 \
   -e ALLOWED_ORIGINS=https://<you>.github.io \
-  romme-signaling
+  games-with-friends
 ```
 
 The page is served over HTTPS on GitHub Pages, so put the server behind TLS (a
@@ -172,8 +172,8 @@ browser to browser over WebRTC and never touch the server.
 
 ```yaml
 services:
-  romme:
-    image: ghcr.io/5v715/romme-signaling:latest
+  games:
+    image: ghcr.io/5v715/games-with-friends:latest
     restart: unless-stopped
     environment:
       ALLOWED_ORIGINS: https://5v715.github.io   # only needed if the GitHub Pages copy should use this server too
@@ -183,10 +183,10 @@ services:
     labels:
       - traefik.enable=true
       - traefik.docker.network=traefik
-      - traefik.http.routers.romme.rule=Host(`romme.example.com`)
-      - traefik.http.routers.romme.entrypoints=websecure
-      - traefik.http.routers.romme.tls.certresolver=letsencrypt
-      - traefik.http.services.romme.loadbalancer.server.port=8080
+      - traefik.http.routers.games.rule=Host(`games.example.com`)
+      - traefik.http.routers.games.entrypoints=websecure
+      - traefik.http.routers.games.tls.certresolver=letsencrypt
+      - traefik.http.services.games.loadbalancer.server.port=8080
 networks:
   traefik:
     external: true

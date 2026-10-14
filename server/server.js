@@ -1,4 +1,4 @@
-// Rommé signaling server: a tiny WebRTC signaling relay with no dependencies.
+// Games with Friends signaling server: a tiny WebRTC signaling relay with no dependencies.
 //
 // The game itself is a static site (public/). It can live on GitHub Pages,
 // or this server serves it too (SERVE_GAME, on by default when the files are
@@ -289,12 +289,12 @@ const server = http.createServer((req, res) => {
   if (url.pathname === '/api/ice' && req.method === 'GET') return json(res, 200, { iceServers: iceServers() });
   if (url.pathname === '/api/signal' && req.method === 'GET') return openStream(req, res, url);
   if (url.pathname === '/api/signal' && req.method === 'POST') return relay(req, res);
-  if (url.pathname === '/') return json(res, 200, { service: 'romme-signaling' });
+  if (url.pathname === '/') return json(res, 200, { service: 'games-with-friends' });
   json(res, 404, { error: 'not found' });
 });
 
 server.listen(PORT, HOST, () => {
-  console.log(`Rommé signaling server on http://${HOST}:${PORT} (allowed origins: ${ALLOWED_ORIGINS.join(', ')}; ` +
+  console.log(`Games with Friends signaling server on http://${HOST}:${PORT} (allowed origins: ${ALLOWED_ORIGINS.join(', ')}; ` +
     `room idle timeout: ${ROOM_IDLE_MS > 0 ? ROOM_IDLE_MS / 60000 + ' min' : 'off'}; admin: ${ADMIN_TOKEN ? 'on' : 'off'}; ` +
     `game: ${SERVE_GAME ? 'served from ' + PUBLIC_DIR : 'not served'})`);
 });

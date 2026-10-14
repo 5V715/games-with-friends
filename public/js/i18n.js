@@ -86,7 +86,8 @@ const STRINGS = {
 
     // ---- home
     'game.romme': 'Rommé',
-    'home.tagline': 'Play rummy with friends — browser to browser, no account needed.',
+    'home.tagline': 'Rommé, UNO and Monopoly Deal with your friends — browser to browser, no account needed.',
+    'home.pickGame': 'Choose a game',
     'home.name': 'Your name',
     'home.namePh': 'Name',
     'home.create': 'Create table',
@@ -115,7 +116,7 @@ const STRINGS = {
     'lobby.remove': 'Remove',
     'lobby.connecting': 'Connecting to host…',
     'lobby.youHost': 'You are the host',
-    'lobby.shareText': 'Join my Rommé table {room}',
+    'lobby.shareText': 'Join my table at Games with Friends: {room}',
     // ---- connection chips
     'conn.host': 'host',
     'conn.bot': 'bot',
@@ -269,7 +270,7 @@ const STRINGS = {
     'toast.relayNeedsTurn': 'Relay-only needs a TURN server',
     'toast.turnUrl': 'TURN URLs start with turn: or turns:',
     'toast.saved': 'Saved — applies to new connections',
-    'code.notCode': 'Not a Rommé connection code',
+    'code.notCode': 'Not a Games with Friends connection code',
     'code.isReply': "That is a reply code — paste the host's invite code",
     'code.isInvite': "That is an invite code — paste the guest's reply code",
     // ---- rules (HTML)
@@ -352,7 +353,8 @@ const STRINGS = {
     'log.gameOver': 'Spiel vorbei — {names} gewinnt mit {points} Punkten',
 
     'game.romme': 'Rommé',
-    'home.tagline': 'Rommé mit Freunden — direkt von Browser zu Browser, ohne Konto.',
+    'home.tagline': 'Rommé, UNO und Monopoly Deal mit Freunden — direkt von Browser zu Browser, ohne Konto.',
+    'home.pickGame': 'Wähle ein Spiel',
     'home.name': 'Dein Name',
     'home.namePh': 'Name',
     'home.create': 'Tisch erstellen',
@@ -380,7 +382,7 @@ const STRINGS = {
     'lobby.remove': 'Entfernen',
     'lobby.connecting': 'Verbinde mit dem Gastgeber…',
     'lobby.youHost': 'Du bist der Gastgeber',
-    'lobby.shareText': 'Komm an meinen Rommé-Tisch {room}',
+    'lobby.shareText': 'Komm an meinen Tisch bei Games with Friends: {room}',
     'conn.host': 'Gastgeber',
     'conn.bot': 'Bot',
     'conn.relay': 'über TURN',
@@ -525,7 +527,7 @@ const STRINGS = {
     'toast.relayNeedsTurn': 'Nur-Relay braucht einen TURN-Server',
     'toast.turnUrl': 'TURN-URLs beginnen mit turn: oder turns:',
     'toast.saved': 'Gespeichert — gilt für neue Verbindungen',
-    'code.notCode': 'Das ist kein Rommé-Verbindungscode',
+    'code.notCode': 'Das ist kein Verbindungscode von Games with Friends',
     'code.isReply': 'Das ist ein Antwortcode — füge den Einladungscode des Gastgebers ein',
     'code.isInvite': 'Das ist ein Einladungscode — füge den Antwortcode des Gastes ein',
     'rules.title': 'Spielregeln',

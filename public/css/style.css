@@ -126,7 +126,37 @@ input:focus, textarea:focus, select:focus { outline: 2px solid var(--accent); ou
   letter-spacing: .02em;
   text-shadow: 0 3px 0 rgba(0, 0, 0, .3);
 }
-.logo .suit { font-size: .6em; vertical-align: middle; margin: 0 .2em; }
+.logo small {
+  display: block;
+  margin-top: 4px;
+  font: 600 clamp(20px, 6.5vw, 28px)/1.1 system-ui, sans-serif;
+  letter-spacing: .14em;
+  text-transform: uppercase;
+  color: var(--gold);
+}
+.pick-label { font-size: 14px; color: var(--ink-dim); margin-bottom: -6px; }
+
+/* Three little cards (one per game) fanned above the title */
+.title-cards { position: relative; height: 92px; margin: 4px auto -4px; width: 170px; }
+.tc {
+  position: absolute; top: 6px; left: 50%;
+  width: 58px; height: 82px; margin-left: -29px;
+  border-radius: 8px; border: 2px solid #fff;
+  box-shadow: 0 6px 14px rgba(0, 0, 0, .4);
+  display: grid; place-items: center;
+  transform-origin: 50% 120%;
+}
+.tc-romme { background: var(--card); color: var(--red); transform: rotate(-18deg) translateX(-34px); }
+.tc-romme b { position: absolute; top: 4px; left: 7px; font: 800 18px/1 system-ui; }
+.tc-romme i { font-style: normal; font-size: 34px; }
+.tc-uno { background: var(--u-R, #e5322d); transform: translateY(-6px); z-index: 1; }
+.tc-uno span {
+  width: 44px; height: 60px; border-radius: 50%; background: #fff; transform: rotate(-28deg);
+  display: grid; place-items: center; color: #e5322d; font: 900 20px/1 system-ui;
+}
+.tc-deal { background: #fffdf7; transform: rotate(18deg) translateX(34px); overflow: hidden; }
+.tc-deal em { position: absolute; top: 0; left: 0; right: 0; height: 24px; background: #2a4fa6; }
+.tc-deal b { margin-top: 18px; color: #2b5a1a; font: 900 20px/1 system-ui; }
 .red { color: #ff6b7d; }
 .tagline { text-align: center; color: var(--ink-dim); margin: 0 0 8px; }
 

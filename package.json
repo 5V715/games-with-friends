@@ -1,7 +1,7 @@
 {
-  "name": "romme",
+  "name": "games-with-friends",
   "version": "1.0.0",
-  "description": "Touch-first multiplayer Romm\u00e9 card game in the browser, connected peer-to-peer over WebRTC (ICE)",
+  "description": "Touch-first card games with friends in the browser (Rommé, UNO, Monopoly Deal), connected peer-to-peer over WebRTC",
   "type": "module",
   "private": true,
   "scripts": {
