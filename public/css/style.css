@@ -1047,16 +1047,16 @@ dialog.sheet > .btn { width: 100%; }
   background: #10151c; touch-action: none; user-select: none; -webkit-user-select: none; -webkit-touch-callout: none;
   padding: calc(6px + var(--safe-t)) 8px calc(8px + var(--safe-b));
 }
-.st-opps { display: flex; justify-content: center; gap: 10px; padding: 0 56px; min-height: 0; flex: 0 0 auto; }
+.st-opps { display: flex; justify-content: space-evenly; gap: 6px; padding: 0 56px; min-height: 0; flex: 0 0 auto; }
 .st-opps:empty { min-height: 40px; }
 .st-opp { display: flex; flex-direction: column; align-items: center; gap: 2px; min-width: 0; }
-.st-oname { font-size: 11px; color: var(--ink-dim); max-width: 90px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.st-oname { font-size: 10px; color: var(--ink-dim); max-width: 90px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .st-mini { position: relative; border: 2px solid #ffffff22; border-radius: 4px; line-height: 0; }
 .st-mini canvas { display: block; border-radius: 2px; }
 .st-pend { position: absolute; left: -6px; bottom: 0; width: 4px; background: var(--danger); border-radius: 2px; }
 .st-badge {
   position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; line-height: 1;
-  font: 900 26px system-ui, sans-serif; color: #fff; text-shadow: 0 2px 0 #000, 0 0 8px #000; opacity: 0; pointer-events: none;
+  font: 900 22px system-ui, sans-serif; color: #fff; text-shadow: 0 2px 0 #000, 0 0 8px #000; opacity: 0; pointer-events: none;
 }
 .st-ko { position: absolute; inset: 0; display: none; align-items: center; justify-content: center; line-height: 1; font: 900 18px system-ui; color: #fff; background: #000a; }
 .st-opp.out .st-ko { display: flex; }
@@ -1070,10 +1070,13 @@ dialog.sheet > .btn { width: 100%; }
 .st-mini.incoming, .st-wellwrap.incoming { animation: st-shake .35s; }
 @keyframes st-shake { 0%, 100% { transform: none; } 25% { transform: translateY(3px); } 60% { transform: translateY(-2px); } }
 
-.st-main { flex: 0 1 auto; min-height: 0; display: flex; justify-content: center; align-items: flex-start; gap: 10px; }
-.st-side { display: flex; flex-direction: column; align-items: center; gap: 4px; width: calc(var(--cell, 24px) * 3); }
-.st-label { font-size: 11px; color: var(--ink-dim); text-transform: uppercase; letter-spacing: 1px; }
-.st-stats { display: flex; flex-direction: column; align-items: center; gap: 2px; font-size: 12px; color: var(--ink-dim); margin-top: 10px; text-align: center; }
+.st-bar { display: flex; align-items: flex-end; justify-content: center; gap: 12px; flex: 0 0 auto; }
+.st-holdbox, .st-nextbox { display: flex; flex-direction: column; align-items: center; gap: 2px; line-height: 0; }
+.st-holdbox { border: 1px solid #ffffff22; border-radius: 6px; padding: 3px 4px; cursor: pointer; }
+.st-holdbox .st-label, .st-nextbox .st-label { line-height: 1; }
+.st-main { flex: 0 1 auto; min-height: 0; display: flex; justify-content: center; }
+.st-label { font-size: 10px; color: var(--ink-dim); text-transform: uppercase; letter-spacing: 1px; }
+.st-stats { display: flex; flex-direction: column; align-items: flex-start; gap: 2px; font-size: 11px; color: var(--ink-dim); line-height: 1.2; }
 .st-stats b { color: var(--gold); font-weight: 700; }
 .st-wellwrap { position: relative; border: 2px solid #ffffff2a; border-radius: 4px; line-height: 0; }
 .st-well { display: block; }

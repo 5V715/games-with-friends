@@ -102,7 +102,7 @@ export function createStackedUI(ctx) {
   const sound = createSound();
   let view = null;
   let root, wellCv, holdCv, nextCv, gWell, gHold, gNext, overlay, oppsBox, garbageBar, stats, fly;
-  let cell = 24, mini = 6;
+  let cell = 24, mini = 4, unit = 12;
   let well = null, wellKey = '', running = false, reported = false;
   let lastEvent = 0;
   let raf = 0, lastT = 0;
@@ -117,18 +117,16 @@ export function createStackedUI(ctx) {
     root.className = 'stacked';
     root.innerHTML = `
       <div class="st-opps"></div>
+      <div class="st-bar">
+        <div class="st-holdbox" role="button" aria-label="${esc(t('stacked.hold'))}"><span class="st-label">${esc(t('stacked.hold'))}</span><canvas class="st-hold"></canvas></div>
+        <div class="st-nextbox"><span class="st-label">${esc(t('stacked.next'))}</span><canvas class="st-next"></canvas></div>
+        <div class="st-stats"></div>
+      </div>
       <div class="st-main">
-        <div class="st-side">
-          <span class="st-label">${esc(t('stacked.hold'))}</span><canvas class="st-hold"></canvas>
-          <div class="st-stats"></div>
-        </div>
         <div class="st-wellwrap">
           <div class="st-garbage"><i></i></div>
           <canvas class="st-well"></canvas>
           <div class="st-overlay"></div>
-        </div>
-        <div class="st-side">
-          <span class="st-label">${esc(t('stacked.next'))}</span><canvas class="st-next"></canvas>
         </div>
       </div>
       <div class="st-fly"></div>`;
@@ -145,19 +143,23 @@ export function createStackedUI(ctx) {
     new ResizeObserver(() => layout()).observe(root);
   }
 
+  // Top to bottom: the others' small wells across the full width, a bar with
+  // hold and the next pieces, then your well as large as the rest allows.
   function layout() {
     if (!root?.isConnected) return;
     const W = root.clientWidth - 16, H = root.clientHeight - 20;
     const others = view ? view.players.length - 1 : 0;
-    // The well gets the space; hold and next are narrow columns beside it.
-    // Height left over goes to the small wells of the others.
-    const minOpp = others ? 4 * VISIBLE + 24 : 40;
-    cell = Math.max(8, Math.floor(Math.min((W - 28) / 16.4, (H - minOpp - 10) / VISIBLE)));
-    mini = others ? Math.max(4, Math.min(12, Math.floor((H - cell * VISIBLE - 40) / VISIBLE), Math.floor((W - 112) / others / (COLS + 2)))) : 4;
+    mini = others ? Math.max(3, Math.min(4, Math.floor((W - 112) / others / (COLS + 3)))) : 0;
+    unit = Math.max(8, Math.min(14, Math.floor((W - 100) / 15.8)));
+    const oppH = others ? mini * VISIBLE + 22 : 36;
+    const barH = unit * 2.2 + 18;
+    cell = Math.max(8, Math.floor(Math.min((W - 20) / COLS, (H - oppH - barH - 24) / VISIBLE)));
     gWell = sizeCanvas(wellCv, cell * COLS, cell * VISIBLE);
-    gHold = sizeCanvas(holdCv, cell * 3, cell * 2.2);
-    gNext = sizeCanvas(nextCv, cell * 3, cell * 10);
+    gHold = sizeCanvas(holdCv, unit * 3, unit * 2.2);
+    gNext = sizeCanvas(nextCv, unit * 3 + unit * 2.4 * 4, unit * 2.2);
     root.style.setProperty('--cell', cell + 'px');
+    for (const cv of oppsBox.querySelectorAll('canvas')) cv.width = 0; // resized on the next render
+    if (view) renderOpps();
     draw();
   }
 
@@ -215,6 +217,8 @@ export function createStackedUI(ctx) {
       if (e.target.closest('button, dialog')) return;
       e.preventDefault();
       sound.unlock();
+      // Tapping the hold box holds the piece.
+      if (e.target.closest('.st-holdbox')) { doHold(); return; }
       try { el.setPointerCapture(e.pointerId); } catch { /* ignore */ }
       g = { id: e.pointerId, x0: e.clientX, y0: e.clientY, ax: e.clientX, ay: e.clientY, t0: performance.now(), moved: false };
     });
@@ -359,15 +363,17 @@ export function createStackedUI(ctx) {
       while (flashes.length && flashes[0].until < now) flashes.shift();
 
       // Hold and next.
-      gHold.clearRect(0, 0, s * 3, s * 2.2);
-      drawPiece(gHold, well.hold, { x: 0, y: 0, w: s * 3, h: s * 2.2 }, s * 0.62, well.canHold ? 1 : 0.35);
-      gNext.clearRect(0, 0, s * 3, s * 10);
+      // Hold and the next five pieces (the first one bigger), side by side.
+      const u = unit;
+      gHold.clearRect(0, 0, u * 3, u * 2.2);
+      drawPiece(gHold, well.hold, { x: 0, y: 0, w: u * 3, h: u * 2.2 }, u * 0.62, well.canHold ? 1 : 0.35);
+      gNext.clearRect(0, 0, u * 12.6, u * 2.2);
       well.queue.slice(0, 5).forEach((type, i) => {
-        const sz = i === 0 ? s * 0.62 : s * 0.48;
-        drawPiece(gNext, type, { x: 0, y: i === 0 ? 0 : s * 2.2 + (i - 1) * s * 1.9, w: s * 3, h: i === 0 ? s * 2.2 : s * 1.9 }, sz);
+        const box = i === 0 ? { x: 0, y: 0, w: u * 3, h: u * 2.2 } : { x: u * 3 + (i - 1) * u * 2.4, y: 0, w: u * 2.4, h: u * 2.2 };
+        drawPiece(gNext, type, box, i === 0 ? u * 0.62 : u * 0.46, i === 0 ? 1 : 0.85);
       });
       garbageBar.style.height = Math.min(VISIBLE, well.pending) * s + 'px';
-      stats.innerHTML = `<b>${esc(t('stacked.level', { n: well.level + 1 }))}</b><span>${esc(t('stacked.lines'))}: ${me()?.lines ?? 0}</span>`;
+        stats.innerHTML = `<b>${esc(t('stacked.level', { n: well.level + 1 }))}</b><span>${esc(t('stacked.lines'))}: ${me()?.lines ?? 0}</span>`;
     }
     renderOverlay();
   }
