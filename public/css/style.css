@@ -910,3 +910,104 @@ dialog.sheet > .btn { width: 100%; }
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { animation: none !important; transition: none !important; }
 }
+
+/* ---------------------------------------------------------------- Bomb Party */
+
+#screen-play[data-game="bomber"] { position: relative; }
+#screen-play[data-game="bomber"] .opponents,
+#screen-play[data-game="bomber"] .play-hand-wrap,
+#screen-play[data-game="bomber"] .play-status { display: none; }
+#screen-play[data-game="bomber"] .play-main { padding: 0; overflow: hidden; position: relative; }
+#screen-play[data-game="bomber"] .play-bar {
+  position: absolute; left: 50%; bottom: 10px; transform: translateX(-50%); z-index: 5; padding: 0;
+}
+#screen-play[data-game="bomber"] .actions {
+  position: absolute; top: calc(4px + var(--safe-t)); left: 6px; right: 6px; z-index: 6;
+  padding: 0; background: none; border: 0; box-shadow: none; pointer-events: none; justify-content: space-between;
+}
+#screen-play[data-game="bomber"] .actions > * { pointer-events: auto; }
+#screen-play[data-game="bomber"] .play-buttons { display: none; }
+
+.bomber {
+  position: absolute; inset: 0;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
+  grid-template-rows: auto minmax(0, 1fr);
+  background: #10151c;
+  touch-action: none; user-select: none; -webkit-user-select: none; -webkit-touch-callout: none;
+}
+.bm-hud {
+  grid-column: 1 / -1; display: flex; align-items: center; gap: 6px 10px; flex-wrap: wrap; justify-content: center;
+  padding: calc(6px + var(--safe-t)) 60px 4px; font-size: 13px; min-height: 40px;
+}
+.bm-chip { display: inline-flex; align-items: center; gap: 4px; white-space: nowrap; }
+.bm-chip i, .bm-result i, .bm-dot { display: inline-block; width: 12px; height: 12px; border-radius: 3px; border: 2px solid #0008; }
+.bm-dot { margin-right: 6px; vertical-align: -1px; }
+.bm-chip.me { font-weight: 700; }
+.bm-chip.out { opacity: .4; text-decoration: line-through; }
+.bm-chip b { font-weight: 400; letter-spacing: -2px; }
+.bm-round { color: var(--ink-dim); }
+.bm-clock { font: 700 16px ui-monospace, monospace; min-width: 3.5em; text-align: center; }
+.bm-clock.hurry { color: var(--danger); animation: pulse 0.5s infinite alternate; }
+.bm-stats { color: var(--gold); white-space: nowrap; }
+.bm-stats em { color: #e58cff; font-style: normal; }
+
+.bm-stage { grid-column: 2; grid-row: 2; position: relative; display: flex; align-items: center; justify-content: center; min-height: 0; padding: 0 0 6px; }
+.bm-stage canvas {
+  display: block; height: 100%; max-height: 100%; aspect-ratio: 15 / 13; width: auto; max-width: 62vw;
+  image-rendering: pixelated; object-fit: contain; border-radius: 4px; box-shadow: 0 4px 18px #000a;
+}
+.bm-overlay { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; pointer-events: none; }
+.bm-big {
+  font: 900 clamp(28px, 8vh, 64px) system-ui, sans-serif; color: #fff; letter-spacing: 2px;
+  text-shadow: 0 0 0 #000, 3px 3px 0 #000, -2px -2px 0 #000, 2px -2px 0 #000, -2px 2px 0 #000;
+  animation: bm-pop .35s ease-out;
+}
+.bm-big.go { color: var(--gold); }
+.bm-big.hurry { color: #ff5a3c; animation: pulse .4s infinite alternate; }
+.bm-note { position: absolute; bottom: 14px; background: #000b; padding: 6px 12px; border-radius: 8px; font-size: 14px; }
+.bm-result { background: #0d1118e6; border: 2px solid var(--gold); border-radius: 12px; padding: 12px 20px; text-align: center; animation: bm-pop .3s ease-out; }
+.bm-result h3 { margin: 0 0 8px; font-size: 20px; }
+.bm-result ul { list-style: none; margin: 0; padding: 0; display: grid; gap: 4px; text-align: left; }
+.bm-result li { display: flex; align-items: center; gap: 8px; }
+@keyframes bm-pop { from { transform: scale(.6); opacity: 0; } to { transform: scale(1); opacity: 1; } }
+
+.bm-pad {
+  grid-column: 1; grid-row: 2; align-self: center; justify-self: center;
+  position: relative; width: min(38vh, 26vw, 190px); aspect-ratio: 1; border-radius: 50%;
+  background: radial-gradient(circle, #ffffff10 0 30%, #ffffff1a 31% 100%); border: 2px solid #ffffff22;
+  touch-action: none;
+}
+.bm-pad::before, .bm-pad::after {
+  content: ""; position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%); background: #2a3140; border-radius: 8px;
+  box-shadow: inset 0 -3px 0 #0006;
+}
+.bm-pad::before { width: 34%; height: 90%; }
+.bm-pad::after { width: 90%; height: 34%; }
+.bm-arrow { position: absolute; z-index: 1; color: #ffffff70; font-size: 16px; line-height: 1; transform: translate(-50%, -50%); pointer-events: none; }
+.bm-arrow.u { left: 50%; top: 18%; } .bm-arrow.d { left: 50%; top: 82%; }
+.bm-arrow.l { left: 18%; top: 50%; } .bm-arrow.r { left: 82%; top: 50%; }
+.bm-pad[data-dir="u"] .bm-arrow.u, .bm-pad[data-dir="d"] .bm-arrow.d,
+.bm-pad[data-dir="l"] .bm-arrow.l, .bm-pad[data-dir="r"] .bm-arrow.r { color: var(--gold); text-shadow: 0 0 8px var(--gold); }
+
+.bm-btns { grid-column: 3; grid-row: 2; position: relative; align-self: center; justify-self: center; width: min(40vh, 26vw, 200px); aspect-ratio: 1; }
+.bm-btn {
+  position: absolute; width: 50%; aspect-ratio: 1; border-radius: 50%; border: 0; color: #fff; touch-action: none;
+  display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 0;
+  font: 800 22px system-ui, sans-serif; box-shadow: inset 0 -5px 0 #0005, 0 3px 8px #0008;
+}
+.bm-btn small { font-size: 10px; font-weight: 600; opacity: .85; }
+.bm-btn.a { right: 0; top: 10%; background: #d8343a; }
+.bm-btn.b { left: 0; bottom: 10%; background: #d8a31c; color: #2a1d00; }
+.bm-btn.down { transform: translateY(2px) scale(.95); box-shadow: inset 0 -2px 0 #0005; filter: brightness(1.15); }
+
+.bm-rotate {
+  display: none; position: absolute; inset: 0; z-index: 7; background: #10151cf2;
+  flex-direction: column; align-items: center; justify-content: center; text-align: center; padding: 24px;
+}
+.bm-rotate p { font-size: 18px; max-width: 260px; }
+.bm-phone { font-size: 64px; animation: bm-turn 1.6s ease-in-out infinite; }
+@keyframes bm-turn { 0%, 30% { transform: rotate(0); } 60%, 100% { transform: rotate(-90deg); } }
+@media (orientation: portrait) {
+  .bm-rotate { display: flex; }
+}

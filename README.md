@@ -1,7 +1,7 @@
 # Games with Friends ♥♠
 
-Touch-first card games to play with friends in the browser: **Rommé** (German
-rummy), **UNO** and **Monopoly Deal**. Players connect **peer-to-peer over WebRTC**; ICE (STUN/TURN) finds the path
+Touch-first games to play with friends in the browser: **Rommé** (German
+rummy), **UNO**, **Monopoly Deal** and the real-time arena game **Bomb Party**. Players connect **peer-to-peer over WebRTC**; ICE (STUN/TURN) finds the path
 between browsers, so game traffic never goes through a server.
 
 - **Game client:** static HTML/CSS/JS in [`public/`](public/). No build step, no
@@ -19,6 +19,7 @@ host can still switch in the lobby.
 | --- | --- | --- |
 | **Rommé** | 2–6 | German rummy: sets and runs, 40 to come out, cutting the deck, Hand ×2, majority vote between rounds |
 | **UNO** | 2–8 | Match color/number/symbol, Skip/Reverse/+2/Wild/Wild +4, call UNO or get caught (+2), first to 500 |
+| **Bomb Party** | 1–4 | Real-time bomb battle in the classic 15×13 arena, best of 3; on-screen D-pad with A/B (hold the phone sideways) or keyboard; items: bomb up, fire up, full fire, skate, kick, remote, skull; falling blocks after 2 minutes |
 | **Monopoly Deal** | 2–5 | Three complete property sets win; real street names (US/German edition by language), tap any card or set for its rent ladder; rent, Debt Collector, Birthday, Sly/Forced Deal, Deal Breaker, Just Say No, houses/hotels |
 
 Every game runs on the host's browser, has bots, works in German and English, and
@@ -33,7 +34,9 @@ This is a private fan implementation with its own card designs.
   40-point first meld, laying off, joker swapping, Hand-Rommé (double penalty),
   voting on another round, and a score sheet.
 - Host-authoritative networking: the host's browser runs the game and sends each
-  player only their own hand.
+  player only their own hand. The real-time game simulates 60 ticks per second on
+  the host; input and frames (20 per second, interpolated) use a second, unordered
+  data channel without retransmits, so a lost packet never stalls the game.
 - Three ways to play:
   1. **Table code** via the signaling server, with trickle ICE and automatic ICE restart.
   2. **Invite codes** you copy and paste. No server at all: the SDP offer/answer is
@@ -76,6 +79,7 @@ This is a private fan implementation with its own card designs.
 | `public/js/games/index.js` | Registry of the games (engine, bot, rules, player limits) |
 | `public/js/games/uno/` | UNO: engine, bot, screen, texts |
 | `public/js/games/deal/` | Monopoly Deal: cards, engine, bot, screen, texts |
+| `public/js/games/bomber/` | Bomb Party: 60 Hz engine, bot, canvas screen with touch controls, texts |
 | `public/js/ui-kit.js` | Choice and multi-select sheets used by the game screens |
 | `public/js/i18n.js` | German and English texts, language detection |
 | `public/js/voice.js` | Push-to-talk recording, chunking and playback |
@@ -113,7 +117,8 @@ Players can also point the game at a server with `?signal=https://…` or in
 
 [`.github/workflows/server-image.yml`](.github/workflows/server-image.yml) builds a
 multi-arch (amd64, arm64 and arm/v7 – e.g. Raspberry Pi with 64- or 32-bit OS) OCI image and pushes it to
-`ghcr.io/<owner>/games-with-friends` on every push to `main` and for `v*` tags.
+`ghcr.io/<owner>/games-with-friends` on every push and for `v*` tags. Every image is
+tagged with its branch name (e.g. `:bomber`; a `/` becomes `-`); `main` also gets `:latest`.
 
 Build and run it yourself:
 

@@ -13,6 +13,8 @@ import { tr } from './i18n.js';
 import { gameInfo } from './games/index.js';
 import { VoiceAssembler, clipToMessages, validVoiceMessage } from './voice.js';
 
+const TICK_MS = 1000 / 60;
+const FRAME_EVERY = 3; // real-time games: send a frame every 3rd tick (20 per second)
 const BOT_NAMES = ['Ada', 'Bruno', 'Clara', 'Dieter', 'Erika', 'Fritz', 'Greta', 'Hans'];
 const BOT_DELAY = 750;
 const AWAY_DELAY = 8000; // a disconnected human is auto-played after this
@@ -45,6 +47,8 @@ export class HostSession extends EventTarget {
     this.links = new Map(); // playerId -> { state, route }
     this.botTimer = null;
     this.voice = new VoiceAssembler();
+    this.inputSeq = new Map();
+    this.loop = null;
 
     if (net) {
       net.addEventListener('message', (ev) => this.#onMessage(ev.detail.peerId, ev.detail.msg));
@@ -65,7 +69,13 @@ export class HostSession extends EventTarget {
     if (msg.t === 'join') return this.#onJoin(peerId, msg);
     const pid = this.peerToPlayer.get(peerId);
     if (!pid) return;
-    if (msg.t === 'action') {
+    if (msg.t === 'input') {
+      // Real-time input; may arrive out of order over the fast channel.
+      const seq = Number(msg.seq) || 0;
+      if (seq <= (this.inputSeq.get(pid) || 0)) return;
+      this.inputSeq.set(pid, seq);
+      if (this.game.realtime) this.game.setInput(pid, msg);
+    } else if (msg.t === 'action') {
       const res = this.apply(pid, msg.action);
       if (!res.ok) this.net.send(peerId, errorMsg(res.key || 'err.badAction', res.params));
     } else if (msg.t === 'voice' && validVoiceMessage(msg)) {
@@ -114,6 +124,8 @@ export class HostSession extends EventTarget {
     }
     this.peerToPlayer.set(peerId, pid);
     this.playerToPeer.set(pid, peerId);
+    this.inputSeq.delete(pid);
+    this.game.resetInput?.(pid);
     const link = this.net.links.get(peerId);
     this.links.set(pid, { state: link?.state || 'open', route: link?.route || null });
     this.net.send(peerId, { t: 'welcome', you: pid, room: this.room });
@@ -215,6 +227,52 @@ export class HostSession extends EventTarget {
     for (const [pid, peerId] of this.playerToPeer) this.net?.send(peerId, { t: 'state', view: this.viewFor(pid) });
     emit(this, 'state', { view: this.viewFor(this.myId) });
     this.#scheduleBot();
+    this.#syncLoop();
+  }
+
+  // ---- real-time games: fixed 60 Hz simulation on the host ----
+
+  input(inp) {
+    if (this.game.realtime) this.game.setInput(this.myId, inp);
+  }
+
+  #syncLoop() {
+    const run = this.game.realtime && this.game.phase !== 'lobby' && this.game.phase !== 'gameOver';
+    if (!run) {
+      clearInterval(this.loop);
+      this.loop = null;
+      return;
+    }
+    if (this.loop) return;
+    this.last = performance.now();
+    this.acc = 0;
+    this.loop = setInterval(() => this.#tickLoop(), TICK_MS / 2);
+  }
+
+  #tickLoop() {
+    const g = this.game;
+    if (!g.realtime) return this.#syncLoop();
+    const now = performance.now();
+    this.acc = Math.min(this.acc + now - this.last, TICK_MS * 10);
+    this.last = now;
+    while (this.acc >= TICK_MS) {
+      this.acc -= TICK_MS;
+      for (const p of g.players) {
+        if (p.bot) g.steer(p.id, this.info.bot(g, p.id));
+        else if (p.id !== this.myId && !this.playerToPeer.has(p.id)) g.setInput(p.id, null);
+      }
+      g.tick();
+      const f = g.frame();
+      if (g.tickNo % FRAME_EVERY === 0 || f.e.length) {
+        for (const peerId of this.playerToPeer.values()) this.net?.sendFast(peerId, { t: 'frame', f });
+      }
+      emit(this, 'frame', f);
+      if (g.changed) {
+        g.changed = false;
+        this.broadcast();
+        if (this.game !== g || !this.loop) return;
+      }
+    }
   }
 
   #scheduleBot() {
@@ -237,6 +295,8 @@ export class HostSession extends EventTarget {
 
   close() {
     clearTimeout(this.botTimer);
+    clearInterval(this.loop);
+    this.loop = null;
     this.net?.close();
   }
 }
@@ -279,7 +339,14 @@ export class GuestSession extends EventTarget {
     if (msg.t === 'welcome') {
       clearInterval(this.joinTimer);
       this.myId = msg.you;
+    } else if (msg.t === 'frame') {
+      // Frames travel unordered: drop ones older than what we have.
+      if (msg.f && (!this.lastFrame || msg.f.n > this.lastFrame)) {
+        this.lastFrame = msg.f.n;
+        emit(this, 'frame', msg.f);
+      }
     } else if (msg.t === 'state') {
+      if (msg.view?.gameNo !== this.view?.gameNo || msg.view?.game !== this.view?.game) this.lastFrame = 0;
       this.view = msg.view;
       emit(this, 'state', { view: msg.view });
     } else if (msg.t === 'error') {
@@ -307,8 +374,24 @@ export class GuestSession extends EventTarget {
     return { ok: true };
   }
 
+  // Real-time input: sent on every change and repeated, because the fast
+  // channel may drop messages. Buttons are press counters, so a repeat never
+  // presses twice.
+  input(inp) {
+    this.inputState = inp;
+    this.#sendInput();
+    if (!this.inputTimer) this.inputTimer = setInterval(() => this.#sendInput(), 100);
+  }
+
+  #sendInput() {
+    if (!this.inputState) return;
+    this.inputSeq = (this.inputSeq || 0) + 1;
+    this.net.sendFast({ t: 'input', seq: this.inputSeq, ...this.inputState });
+  }
+
   close() {
     this.ended = true;
+    clearInterval(this.inputTimer);
     clearInterval(this.joinTimer);
     this.net.close();
   }

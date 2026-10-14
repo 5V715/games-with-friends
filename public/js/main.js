@@ -8,9 +8,10 @@ import { t, msg, applyI18n, setLang, savedLang, LANGS, rankName, lang as current
 import { GAMES, GAME_IDS, gameInfo, DEFAULT_GAME } from './games/index.js';
 import { createUnoUI } from './games/uno/ui.js';
 import { createDealUI } from './games/deal/ui.js';
+import { createBomberUI } from './games/bomber/ui.js';
 import { closeChoice } from './ui-kit.js';
 
-const PLAY_UIS = { uno: createUnoUI, deal: createDealUI };
+const PLAY_UIS = { uno: createUnoUI, deal: createDealUI, bomber: createBomberUI };
 import {
   HostNet, GuestNet, getNetConfig, randomId, randomRoomCode, loadTurnSettings, saveTurnSettings,
   signalingUrl, savedSignalingUrl, saveSignalingUrl, defaultSignalingUrl,
@@ -194,6 +195,10 @@ function attach(session) {
     if (ev.detail.state === 'open') ui.reconnects = 0;
     renderLink();
   });
+  session.addEventListener('frame', (ev) => {
+    if (session !== ui.session) return;
+    ui.play?.api.frame?.(ev.detail);
+  });
   session.addEventListener('voice', (ev) => {
     if (session !== ui.session) return;
     voicePlayer.enqueue(ev.detail);
@@ -270,6 +275,7 @@ function playUI(type) {
         els: { players: $('#play-players'), main: $('#play-main'), status: $('#play-status'), hand: $('#play-hand'), buttons: $('#play-buttons') },
         t, msg, toast, buzz,
         act: (a) => act(a),
+        input: (inp) => ui.session?.input?.(inp),
         speaking: () => ui.speaking,
         dotClass: (p) => (p.id === ui.view.you && !ui.session.isHost ? linkDotClass() : dotClass(p)),
         fitHand: (hand) => fitCards(hand),
@@ -300,6 +306,7 @@ function fitCards(hand) {
 }
 
 function renderPlay(v) {
+  $('#screen-play').dataset.game = v.game;
   show('play');
   closeDialog('dlg-invite');
   const api = playUI(v.game);

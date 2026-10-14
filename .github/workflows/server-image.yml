@@ -2,7 +2,7 @@ name: Signaling server image
 
 on:
   push:
-    branches: [main]
+    branches: ['**']
     tags: ['v*']
     paths: ['server/**', 'public/**', '.dockerignore', '.github/workflows/server-image.yml']
   pull_request:
@@ -40,6 +40,7 @@ jobs:
           images: ${{ env.IMAGE }}
           tags: |
             type=raw,value=latest,enable={{is_default_branch}}
+            type=ref,event=branch
             type=semver,pattern={{version}}
             type=sha
 

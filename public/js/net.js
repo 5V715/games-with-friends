@@ -247,6 +247,19 @@ export class PeerLink extends EventTarget {
     } else {
       this.pc.ondatachannel = (ev) => this.#setupChannel(ev.channel);
     }
+    // Second channel for real-time games: unordered and without retransmits,
+    // so a lost frame never holds up the next one. Both sides create it with
+    // the same id, so it needs no extra negotiation.
+    try {
+      this.fast = this.pc.createDataChannel('fast', { negotiated: true, id: 1000, ordered: false, maxRetransmits: 0 });
+      this.fast.onmessage = (ev) => this.#onData(ev.data);
+    } catch { this.fast = null; }
+  }
+
+  #onData(data) {
+    let msg;
+    try { msg = JSON.parse(data); } catch { return; }
+    this.dispatchEvent(new CustomEvent('message', { detail: msg }));
   }
 
   #setupChannel(dc) {
@@ -257,11 +270,7 @@ export class PeerLink extends EventTarget {
       this.dispatchEvent(new Event('open'));
     };
     dc.onclose = () => this.#emitClose();
-    dc.onmessage = (ev) => {
-      let msg;
-      try { msg = JSON.parse(ev.data); } catch { return; }
-      this.dispatchEvent(new CustomEvent('message', { detail: msg }));
-    };
+    dc.onmessage = (ev) => this.#onData(ev.data);
   }
 
   #emitClose() {
@@ -389,7 +398,16 @@ export class PeerLink extends EventTarget {
     if (this.dc?.readyState === 'open') this.dc.send(JSON.stringify(msg));
   }
 
+  // Best effort: may be lost or arrive out of order (falls back to the reliable channel).
+  sendFast(msg) {
+    if (this.fast?.readyState === 'open') {
+      try { this.fast.send(JSON.stringify(msg)); return; } catch { /* buffer full: fall through */ }
+    }
+    this.send(msg);
+  }
+
   close() {
+    try { this.fast?.close(); } catch { /* ignore */ }
     try { this.dc?.close(); } catch { /* ignore */ }
     try { this.pc.close(); } catch { /* ignore */ }
     this.#emitClose();
@@ -473,6 +491,10 @@ export class HostNet extends EventTarget {
     this.links.get(peerId)?.send(msg);
   }
 
+  sendFast(peerId, msg) {
+    this.links.get(peerId)?.sendFast(msg);
+  }
+
   kick(peerId) {
     this.#drop(peerId);
   }
@@ -540,6 +562,10 @@ export class GuestNet extends EventTarget {
 
   send(msg) {
     this.link?.send(msg);
+  }
+
+  sendFast(msg) {
+    this.link?.sendFast(msg);
   }
 
   close() {
