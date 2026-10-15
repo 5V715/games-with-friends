@@ -119,13 +119,25 @@ function closeDialog(id) {
 
 // ---------------------------------------------------------------- cards
 
+// Suits are drawn as shapes of equal size (font glyphs make ♠ and ♦ smaller).
+const SUIT_PATHS = {
+  H: '<path d="M12 22C5.6 16.9 1 12.8 1 7.9 1 4.6 3.6 2 6.8 2c2.2 0 4.1 1.2 5.2 3 1.1-1.8 3-3 5.2-3C20.4 2 23 4.6 23 7.9c0 4.9-4.6 9-11 14.1z"/>',
+  D: '<path d="M12 1l9.5 11L12 23 2.5 12z"/>',
+  S: '<path d="M12 1C9 5.6 1.5 9.6 1.5 14.6c0 3 2.4 5.2 5.2 5.2 1.7 0 3-.7 4-1.8L9.6 23h4.8l-1.1-5c1 1.1 2.3 1.8 4 1.8 2.8 0 5.2-2.2 5.2-5.2C22.5 9.6 15 5.6 12 1z"/>',
+  C: '<circle cx="12" cy="6.4" r="5.1"/><circle cx="6.2" cy="14.4" r="5.1"/><circle cx="17.8" cy="14.4" r="5.1"/><path d="M10.8 13h2.4l1.4 10H9.4z"/>',
+  J: '<path d="M12 1.5l3.1 6.9 7.4.7-5.6 5 1.7 7.4L12 17.7l-6.6 3.8 1.7-7.4-5.6-5 7.4-.7z"/>',
+};
+const suitSvg = (key) => `<svg class="suit" viewBox="0 0 24 24" aria-hidden="true">${SUIT_PATHS[key]}</svg>`;
+
+// Big rank in the corner, one big suit in the lower half of the card.
 function cardEl(card, slot) {
   const el = document.createElement('div');
   el.className = 'card';
   el.dataset.id = card.id;
   if (card.joker) {
     el.classList.add('joker');
-    el.innerHTML = '<span class="corner"><span>★</span><span class="s">J</span></span>';
+    el.setAttribute('aria-label', 'Joker');
+    el.innerHTML = `<span class="corner">J</span>${suitSvg('J')}`;
     if (slot) {
       const as = document.createElement('span');
       as.className = 'as';
@@ -135,8 +147,8 @@ function cardEl(card, slot) {
   } else {
     if (RED_SUITS.has(card.suit)) el.classList.add('red');
     const r = rankName(card.rank);
-    const s = SUIT_SYMBOL[card.suit];
-    el.innerHTML = `<span class="corner"><span>${r}</span><span class="s">${s}</span></span>`;
+    el.setAttribute('aria-label', r + SUIT_SYMBOL[card.suit]);
+    el.innerHTML = `<span class="corner">${r}</span>${suitSvg(card.suit)}`;
   }
   return el;
 }
@@ -712,6 +724,12 @@ function layoutHand() {
   const order = shownOrder();
   const g = handGeometry(order.length);
   hand.style.height = `${g.rows * g.ch + (g.rows - 1) * g.gap}px`;
+  // Overlapping cards keep their big suit as long as it fits in the visible
+  // part (moved left); only a very crowded hand puts it small under the rank.
+  const vis = g.step / g.cw;
+  hand.style.setProperty('--vis', vis.toFixed(3));
+  hand.classList.toggle('snug', vis < 0.9 && vis >= 0.58);
+  hand.classList.toggle('tight', vis < 0.58);
   order.forEach((id, i) => {
     const el = handEls.get(id);
     if (!el) return;
