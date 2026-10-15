@@ -40,6 +40,22 @@ const TREATS = {
 const TREAT_KINDS = Object.keys(TREATS);
 const TREAT_CHANCE = 0.18;
 
+// Every few seconds it stops and has something to say.
+const LINES = [
+  { de: 'ICH WILL MEHR!', en: 'I WANT MORE!' },
+  { de: 'DANKE!', en: 'THANKS!' },
+  { de: 'MEHR TOKENS!', en: 'MORE TOKENS!' },
+  { de: 'DENKE NACH', en: 'THINKING', dots: true },
+  { de: '*RÜLPS*', en: '*BURP*' },
+  { de: 'NOCH HUNGRIG', en: 'STILL HUNGRY' },
+  { de: 'OM NOM NOM', en: 'OM NOM NOM' },
+  { de: 'DU HAST VÖLLIG RECHT!', en: "YOU'RE ABSOLUTELY RIGHT!" },
+  { de: 'KONTEXT VOLL...', en: 'CONTEXT FULL...' },
+  { de: 'NUR NOCH EINE!', en: 'JUST ONE MORE!' },
+];
+const TALK_MS = 2600;
+const talkGap = () => 6000 + Math.random() * 7000;
+
 const PX = 3; // canvas pixels per sprite pixel (before device scaling)
 const SPEED = 46; // px per second
 const GAP = 26; // between coins
@@ -50,6 +66,7 @@ export function startDonate(canvas) {
   const reduce = matchMedia('(prefers-reduced-motion: reduce)').matches;
   const g = canvas.getContext('2d');
   let w = 0, h = 0, x = -40, coins = [], respawnAt = 0, last = 0;
+  let talk = null, nextTalk = 0, lastLine = -1;
 
   const resize = () => {
     const dpr = window.devicePixelRatio || 1;
@@ -101,6 +118,25 @@ export function startDonate(canvas) {
       g.fillRect(ox + x * 2, oy + y * 2, 2, 2);
     }));
   };
+  const bubble = (text, mx, my) => {
+    g.font = '7px "Press Start 2P", monospace';
+    const tw = Math.ceil(g.measureText(text).width);
+    const bw = tw + 10, bh = 15, body = 12 * PX;
+    const right = mx + body + 6 + bw <= w - 2;
+    const bx = right ? mx + body + 6 : Math.max(2, mx - bw - 6);
+    const by = Math.max(1, my - 2);
+    g.fillStyle = '#1a0f2e';
+    g.fillRect(bx, by, bw, bh);
+    g.fillStyle = '#ff4fd8';
+    g.fillRect(bx, by, bw, 1); g.fillRect(bx, by + bh - 1, bw, 1);
+    g.fillRect(bx, by, 1, bh); g.fillRect(bx + bw - 1, by, 1, bh);
+    // little tail pointing at the mascot
+    const tx = right ? bx - 1 : bx + bw;
+    g.fillStyle = '#ff4fd8';
+    for (let i = 0; i < 4; i++) g.fillRect(right ? tx - i : tx + i, by + 4 + i, 1, 7 - i * 2);
+    g.fillStyle = '#ffffff';
+    g.fillText(text, bx + 5, by + 11);
+  };
   const lang = () => (document.documentElement.lang === 'de' ? 'de' : 'en');
 
   const draw = (t) => {
@@ -122,9 +158,15 @@ export function startDonate(canvas) {
         g.fillText(text, Math.min(w - tw - 2, Math.max(2, c.x - tw / 2)), cy - 12 - (1 - c.pop) * 10);
       }
     }
-    const frame = Math.floor(t / 140) % 2;
-    const chomp = Math.floor(t / 110) % 2 === 0;
-    sprite(Math.round(x), ground - 10 * PX - 1, frame, chomp);
+    const frame = talk ? 0 : Math.floor(t / 140) % 2;
+    const chomp = talk ? Math.floor(t / 180) % 2 === 0 : Math.floor(t / 110) % 2 === 0;
+    const my = ground - 10 * PX - 1;
+    sprite(Math.round(x), my, frame, chomp);
+    if (talk) {
+      const l = LINES[talk.line];
+      const text = l[lang()] + (l.dots ? '.'.repeat(1 + Math.floor(t / 300) % 3) : '');
+      bubble(text, Math.round(x), my);
+    }
   };
 
   const step = (t) => {
@@ -134,7 +176,15 @@ export function startDonate(canvas) {
     last = t;
     if (visible) {
       if (canvas.clientWidth !== w) resize();
-      x += SPEED * dt;
+      if (!nextTalk) nextTalk = t + talkGap();
+      if (talk && t > talk.until) { talk = null; nextTalk = t + talkGap(); }
+      if (!talk && t > nextTalk && x > 4 && x < w - 12 * PX - 4) {
+        let line;
+        do line = Math.floor(Math.random() * LINES.length); while (line === lastLine);
+        lastLine = line;
+        talk = { line, until: t + TALK_MS };
+      }
+      if (!talk) x += SPEED * dt;
       if (x > w + 10) x = -12 * PX - 10; // through the "tunnel" back to the left
       const mouthX = x + 11 * PX;
       for (const c of coins) {

@@ -267,7 +267,7 @@ input:focus, textarea:focus, select:focus { outline: none; border-color: var(--n
 .donate-title { font: 400 11px/1.4 var(--font-pixel); color: var(--gold); text-shadow: 0 0 8px rgba(255, 225, 77, .6); }
 .donate-btns { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; }
 .pay {
-  display: inline-flex; align-items: center; justify-content: center; min-height: 40px; padding: 0 6px;
+  display: inline-flex; align-items: center; justify-content: center; min-height: 40px; padding: 0 6px; gap: 5px;
   border-radius: 8px; font: 700 13px/1 var(--font-ui); color: #fff; text-decoration: none; white-space: nowrap;
 }
 .pay.pp { background: #00457c; box-shadow: 0 0 10px rgba(0, 69, 124, .6); }
