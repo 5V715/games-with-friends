@@ -25,7 +25,7 @@
           <span class="tc tc-deal"><em></em><b>3M</b></span>
         </div>
         <h1 class="logo">Games <small>with Friends</small></h1>
-        <p class="tagline" data-i18n="home.tagline">Rommé, UNO, Monopoly Deal and Bomber Buben with your friends — browser to browser, no account needed.</p>
+        <p class="tagline" data-i18n="home.tagline">Rommé, UNO, Monopoly Deal, Bomber Buben and Stacked with your friends — browser to browser, no account needed.</p>
 
         <label class="field">
           <span data-i18n="home.name">Your name</span>
@@ -275,6 +275,18 @@
     <div class="dlg-actions">
       <button class="btn" data-close data-i18n="settings.cancel">Cancel</button>
       <button class="btn primary" id="btn-save-settings" data-i18n="settings.save">Save</button>
+    </div>
+  </dialog>
+
+  <!-- Invite link without a saved name: ask for it, then join right away -->
+  <dialog id="dlg-name" class="sheet">
+    <h2 id="join-name-title">Join table</h2>
+    <p class="hint" data-i18n="join.nameHint">What should the others call you?</p>
+    <label class="field"><span data-i18n="home.name">Your name</span>
+      <input id="join-name" type="text" maxlength="20" autocomplete="nickname" enterkeyhint="go" placeholder="Name" data-i18n-ph="home.namePh"></label>
+    <div class="dlg-actions">
+      <button class="btn" data-close data-i18n="settings.cancel">Cancel</button>
+      <button class="btn primary" id="btn-name-join" data-i18n="home.join">Join</button>
     </div>
   </dialog>
 

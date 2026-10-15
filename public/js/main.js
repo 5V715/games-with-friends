@@ -1139,6 +1139,24 @@ function capture(el, pointerId) {
   try { el.setPointerCapture(pointerId); } catch { /* pointer already gone */ }
 }
 
+function askNameAndJoin(room) {
+  const dlg = $('#dlg-name');
+  const input = $('#join-name');
+  $('#join-name-title').textContent = t('join.nameTitle', { room });
+  input.value = '';
+  const go = () => {
+    const name = input.value.trim();
+    if (!name) { input.focus(); buzz(20); return; }
+    $('#name').value = name;
+    closeDialog('dlg-name');
+    joinOnline(room);
+  };
+  $('#btn-name-join').onclick = go;
+  input.onkeydown = (e) => { if (e.key === 'Enter') { e.preventDefault(); go(); } };
+  openDialog('dlg-name');
+  setTimeout(() => input.focus(), 50);
+}
+
 function startTalking() {
   voicePlayer.unlock();
   if (!ui.session?.canTalk) {
@@ -1462,12 +1480,11 @@ function bind() {
   if (room) {
     $('#room-input').value = room.toUpperCase();
     // A guest who reloads the page rejoins their seat automatically.
-    if (store('session', 'romme.activeRoom') === room.toUpperCase()) setTimeout(() => joinOnline(room), 0);
-    else {
-      setTimeout(() => ($('#name').value ? $('#btn-join') : $('#name')).focus(), 50);
-      // Invited by link: show where to tap.
-      $('#btn-join').classList.add('hint');
-    }
+    // Invited by link: join right away; without a saved name, ask for it first.
+    // (If the player cancels, the Join button glows to show where to tap.)
+    $('#btn-join').classList.add('hint');
+    if (store('session', 'romme.activeRoom') === room.toUpperCase() || $('#name').value.trim()) setTimeout(() => joinOnline(room), 0);
+    else askNameAndJoin(room.toUpperCase());
   }
 
   $('#btn-host').onclick = hostOnline;

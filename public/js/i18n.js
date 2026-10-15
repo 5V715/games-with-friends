@@ -86,10 +86,12 @@ const STRINGS = {
 
     // ---- home
     'game.romme': 'Rommé',
-    'home.tagline': 'Rommé, UNO, Monopoly Deal and Bomber Buben with your friends — browser to browser, no account needed.',
+    'home.tagline': 'Rommé, UNO, Monopoly Deal, Bomber Buben and Stacked with your friends — browser to browser, no account needed.',
     'home.source': 'Source code on GitHub',
     'home.pickGame': 'Choose a game',
     'home.name': 'Your name',
+    'join.nameTitle': 'Join table {room}',
+    'join.nameHint': 'What should the others call you?',
     'home.namePh': 'Name',
     'home.create': 'Create table',
     'home.codePh': 'Table code',
@@ -354,10 +356,12 @@ const STRINGS = {
     'log.gameOver': 'Spiel vorbei — {names} gewinnt mit {points} Punkten',
 
     'game.romme': 'Rommé',
-    'home.tagline': 'Rommé, UNO, Monopoly Deal und Bomber Buben mit Freunden — direkt von Browser zu Browser, ohne Konto.',
+    'home.tagline': 'Rommé, UNO, Monopoly Deal, Bomber Buben und Stacked mit Freunden — direkt von Browser zu Browser, ohne Konto.',
     'home.source': 'Quellcode auf GitHub',
     'home.pickGame': 'Wähle ein Spiel',
     'home.name': 'Dein Name',
+    'join.nameTitle': 'Tisch {room} beitreten',
+    'join.nameHint': 'Wie sollen dich die anderen nennen?',
     'home.namePh': 'Name',
     'home.create': 'Tisch erstellen',
     'home.codePh': 'Tisch-Code',
