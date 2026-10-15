@@ -1,4 +1,4 @@
-// Monopoly Deal screen: everyone's bank and property sets, your hand, and
+// Hegemony Deal screen: everyone's bank and property sets, your hand, and
 // sheets for every decision (where to play a card, targets, payments,
 // Just Say No, discarding).
 import { SETS, COLORS, NO_BUILDINGS, cardColors, cardLabel } from './cards.js';

@@ -1,4 +1,4 @@
-// Simple Monopoly Deal computer player.
+// Simple Hegemony Deal computer player.
 import { SETS, COLORS, NO_BUILDINGS, cardColors } from './cards.js';
 import { stack, isFull, rentFor, payables } from './engine.js';
 

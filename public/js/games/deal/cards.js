@@ -1,4 +1,4 @@
-// Monopoly Deal card set: 106 playable cards.
+// Hegemony Deal card set: 106 playable cards.
 
 export const SETS = {
   brown: { size: 2, rent: [1, 2], value: 1 },

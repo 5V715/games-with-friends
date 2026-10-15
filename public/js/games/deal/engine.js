@@ -1,4 +1,4 @@
-// Monopoly Deal rules engine (authoritative, runs on the host).
+// Hegemony Deal rules engine (authoritative, runs on the host).
 //
 // Everyone starts with 5 cards. On your turn you draw 2 (5 with an empty
 // hand) and play up to 3 cards: money/actions into your bank, properties

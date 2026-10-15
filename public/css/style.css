@@ -722,7 +722,7 @@ body.dragging-cards, body.dragging-cards * { cursor: grabbing !important; }
 .lobby-game { text-align: center; font: 700 20px/1.2 var(--font-ui); }
 .lobby-game:empty { display: none; }
 
-/* ---------- Generic game screen (UNO, Monopoly Deal) ---------- */
+/* ---------- Generic game screen (UNO, Hegemony Deal) ---------- */
 
 .play-main { flex: 1 1 auto; overflow-y: auto; min-height: 0; padding: 10px 8px; }
 .play-bar { display: flex; align-items: center; gap: 8px; padding: 4px 12px; flex: 0 0 auto; }
@@ -796,7 +796,7 @@ body.dragging-cards, body.dragging-cards * { cursor: grabbing !important; }
 .uno-btn { font-weight: 900; letter-spacing: .05em; }
 .scores .left-cards .ucard { margin: 0; }
 
-/* ---------- Monopoly Deal ---------- */
+/* ---------- Hegemony Deal ---------- */
 
 :root {
   --col-brown: #8b5a2b; --col-lblue: #8fd0f2; --col-pink: #d9529c; --col-orange: #f08a24; --col-red: #d93a2b;

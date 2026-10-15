@@ -4,7 +4,7 @@ const plural = (n, one, many) => (n === 1 ? one : many);
 
 addStrings({
   en: {
-    'game.deal': 'Monopoly Deal',
+    'game.deal': 'Hegemony Deal',
     'deal.color.brown': 'Brown',
     'deal.color.lblue': 'Light blue',
     'deal.color.pink': 'Pink',
@@ -184,7 +184,7 @@ addStrings({
         <b>Just Say No</b>: cancel an action against you — it can be answered with another Just Say No.</p>`,
   },
   de: {
-    'game.deal': 'Monopoly Deal',
+    'game.deal': 'Hegemony Deal',
     'deal.color.brown': 'Braun',
     'deal.color.lblue': 'Hellblau',
     'deal.color.pink': 'Pink',

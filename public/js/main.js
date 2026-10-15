@@ -267,7 +267,7 @@ function render() {
   renderRoundOver();
 }
 
-// ---------------------------------------------------------------- UNO / Monopoly Deal screen
+// ---------------------------------------------------------------- UNO / Hegemony Deal screen
 
 function playUI(type) {
   if (ui.play?.type !== type) {

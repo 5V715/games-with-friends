@@ -1,7 +1,7 @@
 {
   "name": "Silas Arcade",
   "short_name": "Silas Arcade",
-  "description": "Rommé, 1!, Monopoly Deal, Bomber Buben and Stacked with friends, browser to browser",
+  "description": "Rommé, 1!, Hegemony Deal, Bomber Buben and Stacked with friends, browser to browser",
   "start_url": "./",
   "scope": "./",
   "display": "standalone",
