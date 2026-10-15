@@ -11,6 +11,7 @@ import { createDealUI } from './games/deal/ui.js';
 import { createBomberUI } from './games/bomber/ui.js';
 import { createStackedUI } from './games/stacked/ui.js';
 import { closeChoice } from './ui-kit.js';
+import { startDonate } from './donate.js';
 
 const PLAY_UIS = { uno: createUnoUI, deal: createDealUI, bomber: createBomberUI, stacked: createStackedUI };
 import {
@@ -64,6 +65,7 @@ const ui = {
 
 function show(screen) {
   for (const s of $$('.screen')) s.classList.toggle('active', s.id === `screen-${screen}`);
+  if (screen === 'home') startDonate($('#donate-track'));
 }
 
 let toastTimer;
@@ -1486,6 +1488,7 @@ function drawTitleArt() {
 function translatePage() {
   renderLangSwitches();
   applyI18n();
+  startDonate($('#donate-track'));
   drawTitleArt();
   renderHomeGamePick();
   for (const o of $('#bot-count').options) o.textContent = t('home.bots', { n: Number(o.value) });

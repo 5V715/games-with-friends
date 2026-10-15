@@ -256,6 +256,26 @@ input:focus, textarea:focus, select:focus { outline: none; border-color: var(--n
 }
 .repo-link:hover, .repo-link:focus-visible { opacity: 1; color: var(--ink); }
 
+/* Donation box at the very end of the start page ("feed my Claude"). */
+.donate {
+  margin-top: 4px; padding: 10px 12px 12px; border-radius: 12px;
+  border: 2px solid rgba(255, 79, 216, .4); background: rgba(11, 6, 32, .8);
+  box-shadow: 0 0 16px rgba(255, 79, 216, .2); display: grid; gap: 8px;
+}
+.donate-track { display: block; width: 100%; height: 46px; image-rendering: pixelated; }
+.donate-text { display: grid; gap: 4px; font-size: 13px; color: var(--ink-dim); line-height: 1.35; }
+.donate-title { font: 400 11px/1.4 var(--font-pixel); color: var(--gold); text-shadow: 0 0 8px rgba(255, 225, 77, .6); }
+.donate-btns { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; }
+.pay {
+  display: inline-flex; align-items: center; justify-content: center; min-height: 40px; padding: 0 6px;
+  border-radius: 8px; font: 700 13px/1 var(--font-ui); color: #fff; text-decoration: none; white-space: nowrap;
+}
+.pay.pp { background: #00457c; box-shadow: 0 0 10px rgba(0, 69, 124, .6); }
+.pay.kf { background: #ff5e5b; box-shadow: 0 0 10px rgba(255, 94, 91, .5); }
+.pay.gs { background: #ea4aaa; box-shadow: 0 0 10px rgba(234, 74, 170, .5); }
+.pay:active { transform: scale(.96); }
+.pay:focus-visible { outline: 2px solid var(--neon-cyan); outline-offset: 2px; }
+
 /* ---------- Lobby ---------- */
 
 .bar {
