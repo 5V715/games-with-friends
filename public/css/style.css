@@ -154,7 +154,7 @@ input:focus, textarea:focus, select:focus { outline: none; border-color: var(--n
   text-align: center;
   margin: 0;
   color: var(--neon-pink);
-  text-shadow: 0 0 8px var(--neon-pink), 0 0 22px rgba(255, 79, 216, .6);
+  text-shadow: var(--logo-glow, 0 0 8px var(--neon-pink));
 }
 .logo small {
   display: block;
@@ -166,6 +166,48 @@ input:focus, textarea:focus, select:focus { outline: none; border-color: var(--n
   color: var(--neon-cyan);
   text-shadow: 0 0 6px var(--neon-cyan);
 }
+/* Old-TV title: a bright band rolls down, the glow flickers now and then,
+   and every few seconds a burst of static with a horizontal jolt. */
+.logo {
+  --logo-glow: 0 0 8px var(--neon-pink), 0 0 22px rgba(255, 79, 216, .6);
+  position: relative;
+  animation: logo-flicker 7s infinite, logo-glitch 9s steps(1) infinite;
+}
+.logo::before, .logo::after { content: ""; position: absolute; pointer-events: none; }
+.logo::before {
+  left: -6%; right: -6%; height: 22%; top: -25%;
+  background: linear-gradient(transparent, rgba(255, 255, 255, .16) 45%, rgba(56, 242, 255, .12) 55%, transparent);
+  animation: logo-roll 3.6s linear infinite;
+}
+.logo::after {
+  inset: -8% -6%;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='140' height='140'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.85' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 1 0 0 0 0 1 0 0 0 0 1 1.6 0 0 0 -.75'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+  opacity: 0;
+  animation: logo-noise 9s steps(1) infinite;
+}
+@keyframes logo-roll { from { top: -25%; } to { top: 110%; } }
+@keyframes logo-flicker {
+  0%, 17%, 19.5%, 22%, 53%, 55%, 100% { opacity: 1; }
+  18% { opacity: .55; }
+  21% { opacity: .82; }
+  54% { opacity: .35; }
+}
+@keyframes logo-noise {
+  0%, 61%, 66%, 100% { opacity: 0; }
+  61.5% { opacity: .7; background-position: 0 0; }
+  62.5% { opacity: .45; background-position: 37px 14px; }
+  63.5% { opacity: .8; background-position: -23px 41px; }
+  64.5% { opacity: .4; background-position: 11px -17px; }
+  65.5% { opacity: .6; background-position: -31px -9px; }
+}
+@keyframes logo-glitch {
+  0%, 61%, 66%, 100% { transform: none; text-shadow: var(--logo-glow); }
+  61.5% { transform: translateX(-4px) skewX(-5deg); text-shadow: -3px 0 var(--neon-cyan), 3px 0 #ff2a5a, 0 0 8px var(--neon-pink); }
+  62.5% { transform: translateX(5px); text-shadow: var(--logo-glow); }
+  63.5% { transform: translateX(-2px) skewX(4deg); text-shadow: 3px 0 var(--neon-cyan), -3px 0 #ff2a5a, 0 0 8px var(--neon-pink); }
+  64.5% { transform: translateX(2px) scaleY(.96); text-shadow: var(--logo-glow); }
+}
+
 .pick-label { font-size: 14px; color: var(--ink-dim); margin-bottom: -6px; }
 
 /* Three little cards (one per game) fanned above the title */
