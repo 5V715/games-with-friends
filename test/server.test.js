@@ -122,3 +122,16 @@ test('signaling activity keeps a room alive', async () => {
     srv.stop();
   }
 });
+
+test('the game page gets an absolute link-preview image address', async () => {
+  const srv = await startServer({ SERVE_GAME: 'true' });
+  try {
+    const res = await fetch(`${srv.base}/?room=ABCD`, { headers: { 'X-Forwarded-Host': 'play.example.com', 'X-Forwarded-Proto': 'https' } });
+    const html = await res.text();
+    assert.match(html, /property="og:image" content="https:\/\/play\.example\.com\/preview\.jpg"/);
+    const img = await fetch(`${srv.base}/preview.jpg`);
+    assert.equal(img.headers.get('content-type'), 'image/jpeg');
+  } finally {
+    srv.stop();
+  }
+});

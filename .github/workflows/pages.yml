@@ -32,7 +32,14 @@ jobs:
         run: |
           node -e 'const u = process.env.SIGNALING_URL || ""; require("fs").writeFileSync("public/config.js", `export const SIGNALING_URL = ${JSON.stringify(u)};\n`)'
 
-      - uses: actions/configure-pages@v5
+      - id: pages
+        uses: actions/configure-pages@v5
+
+      # Link previews need the preview image's full address.
+      - name: Absolute link-preview image
+        env:
+          BASE_URL: ${{ steps.pages.outputs.base_url }}
+        run: sed -i "s|content=\"preview.jpg\"|content=\"${BASE_URL%/}/preview.jpg\"|g" public/index.html
       - uses: actions/upload-pages-artifact@v3
         with:
           path: public

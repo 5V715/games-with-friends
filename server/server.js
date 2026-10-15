@@ -48,8 +48,19 @@ const MIME = {
   '.webmanifest': 'application/manifest+json',
   '.svg': 'image/svg+xml',
   '.png': 'image/png',
+  '.jpg': 'image/jpeg',
   '.ico': 'image/x-icon',
+  '.woff2': 'font/woff2',
 };
+
+// Link previews need the image's full address; use the address the page was
+// requested under (Traefik and other proxies pass on the original host/scheme).
+function absolutePreview(req, html) {
+  const host = String(req.headers['x-forwarded-host'] || req.headers.host || '').split(',')[0].trim();
+  if (!/^[A-Za-z0-9.-]+(:\d+)?$/.test(host)) return html;
+  const proto = String(req.headers['x-forwarded-proto'] || '').split(',')[0].trim() === 'https' || req.socket.encrypted ? 'https' : 'http';
+  return html.replace(/content="preview\.jpg"/g, `content="${proto}://${host}/preview.jpg"`);
+}
 
 const PORT = Number(process.env.PORT) || 8080;
 const HOST = process.env.HOST || '0.0.0.0';
@@ -257,6 +268,7 @@ function serveStatic(req, res, url) {
   if (!file.startsWith(PUBLIC_DIR + path.sep)) return json(res, 403, { error: 'forbidden' });
   fs.readFile(file, (err, body) => {
     if (err) return json(res, 404, { error: 'not found' });
+    if (path.basename(file) === 'index.html') body = absolutePreview(req, body.toString('utf8'));
     res.writeHead(200, {
       'Content-Type': MIME[path.extname(file)] || 'application/octet-stream',
       'Cache-Control': 'no-cache',
