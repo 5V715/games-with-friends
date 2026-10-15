@@ -370,7 +370,7 @@ function renderGamePick(box, selected, onPick) {
 function renderHomeGamePick() {
   renderGamePick($('#game-pick'), savedGame(), (id) => {
     store('local', 'romme.game', id);
-    renderHomeGamePick();
+  renderHomeGamePick();
   });
 }
 
@@ -1456,9 +1456,37 @@ function renderLangSwitches() {
 }
 
 // Applies the current language to all static and rendered text.
+// The pixel bomb and brick next to the cards in the logo.
+function drawTitleArt() {
+  const PAL = { k: '#16131c', w: '#ffffff', y: '#ffd84a', o: '#ff9a2e', g: '#4a4f66' };
+  const BOMB = [
+    '.........y..', '........yoy.', '.......o.y..', '......k.....', '....kkkk....', '..kkkkkkkk..',
+    '.kkwwkkkkkk.', '.kwwkkkkkkk.', '.kwkkkkkkkk.', '.kkkkkkkkgk.', '.kkkkkkkgkk.', '..kkkkkkkk..', '....kkkk....',
+  ];
+  for (const cv of $$('.tc-pixel')) {
+    const g = cv.getContext('2d');
+    g.clearRect(0, 0, cv.width, cv.height);
+    if (cv.dataset.art === 'bomb') {
+      BOMB.forEach((row, y) => [...row].forEach((c, x) => { if (PAL[c]) { g.fillStyle = PAL[c]; g.fillRect(x + 1, y + 1, 1, 1); } }));
+    } else {
+      // Bricks in two colours with mortar lines, offset every other row.
+      for (let y = 0; y < 12; y++) {
+        for (let x = 0; x < 12; x++) {
+          const row = Math.floor(y / 3);
+          const off = row % 2 ? 3 : 0;
+          const mortar = y % 3 === 0 || (x + off) % 6 === 0;
+          g.fillStyle = mortar ? '#5a2a14' : (y % 3 === 1 ? '#f0955a' : '#c8592e');
+          g.fillRect(x, y, 1, 1);
+        }
+      }
+    }
+  }
+}
+
 function translatePage() {
   renderLangSwitches();
   applyI18n();
+  drawTitleArt();
   renderHomeGamePick();
   for (const o of $('#bot-count').options) o.textContent = t('home.bots', { n: Number(o.value) });
   const sel = $('#lang-select');
