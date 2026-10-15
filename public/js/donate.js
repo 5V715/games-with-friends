@@ -19,6 +19,27 @@ const LEGS = [
 ];
 const MOUTH = [[9, 5], [10, 5], [11, 5], [10, 6], [11, 6]];
 
+// Now and then a treat instead of a coin. k glass/outline, w white, y/a beer,
+// o bun/crust, s seeds, g green, b patty/brown, c cheese, r red, p pink.
+const TREAT_PAL = {
+  w: '#ffffff', y: '#f2b632', a: '#ffe08a', k: '#cfd6e0', o: '#e0a050', s: '#fff3c4', g: '#5bbf4a',
+  b: '#6b3a1f', c: '#ffcc33', r: '#d2422f', p: '#ff8ac6', d: '#2f7d3a', m: '#1a0f2e', t: '#ffd23a',
+};
+const TREATS = {
+  beer: { say: { de: 'PROST!', en: 'CHEERS!' }, map: [
+    '.wwwwww..', 'wwwwwwww.', 'yayyyyy..', 'yayyyyykk', 'yayyyyy.k', 'yayyyyy.k', 'yayyyyykk', 'yyyyyyy..'] },
+  burger: { say: { de: 'MJAM!', en: 'YUM!' }, map: [
+    '..ooooo..', '.oosoaso.', 'ooooooooo', 'ggggggggg', 'ccccccccc', 'bbbbbbbbb', 'ooooooooo', '.ooooooo.'] },
+  pizza: { say: { de: 'MJAM!', en: 'YUM!' }, map: [
+    'ooooooooo', '.crcccrc.', '.ccccccc.', '..ccrcc..', '..ccccc..', '...crc...', '....c....'] },
+  donut: { say: { de: 'MJAM!', en: 'YUM!' }, map: [
+    '..pppp..', '.pwppwp.', 'pppoopwp', 'ppo..opp', 'pwo..opp', 'pppoopwp', '.pwppwp.', '..pppp..'] },
+  gpu: { say: { de: '+1 GPU', en: '+1 GPU' }, map: [
+    'dddddddddd', 'dmmmdmmmdd', 'dmwmdmwmdd', 'dmmmdmmmdd', 'dddddddddd', 't.t.t.t...'] },
+};
+const TREAT_KINDS = Object.keys(TREATS);
+const TREAT_CHANCE = 0.18;
+
 const PX = 3; // canvas pixels per sprite pixel (before device scaling)
 const SPEED = 46; // px per second
 const GAP = 26; // between coins
@@ -42,7 +63,10 @@ export function startDonate(canvas) {
   };
   const fillCoins = () => {
     coins = [];
-    for (let cx = 30; cx < w - 10; cx += GAP) coins.push({ x: cx, eaten: false, pop: 0 });
+    for (let cx = 30; cx < w - 10; cx += GAP) {
+      const kind = Math.random() < TREAT_CHANCE ? TREAT_KINDS[Math.floor(Math.random() * TREAT_KINDS.length)] : 'coin';
+      coins.push({ x: cx, kind, eaten: false, pop: 0 });
+    }
   };
 
   const sprite = (sx, sy, frame, chomp) => {
@@ -66,6 +90,19 @@ export function startDonate(canvas) {
     g.fillRect(cx - wv + 1, cy - 4, 2, 2);
   };
 
+  const treat = (kind, cx, cy, t) => {
+    const map = TREATS[kind].map;
+    const tw = map[0].length * 2, th = map.length * 2;
+    const bob = Math.round(Math.sin(t / 250 + cx) * 1.5);
+    const ox = Math.round(cx - tw / 2), oy = Math.round(cy - th / 2) + bob;
+    map.forEach((row, y) => [...row].forEach((c, x) => {
+      if (!TREAT_PAL[c]) return;
+      g.fillStyle = TREAT_PAL[c];
+      g.fillRect(ox + x * 2, oy + y * 2, 2, 2);
+    }));
+  };
+  const lang = () => (document.documentElement.lang === 'de' ? 'de' : 'en');
+
   const draw = (t) => {
     g.clearRect(0, 0, w, h);
     const ground = h - 4;
@@ -74,11 +111,15 @@ export function startDonate(canvas) {
     for (let i = 0; i < w; i += 8) g.fillRect(i, ground, 4, 2);
     const cy = ground - 15;
     for (const c of coins) {
-      if (!c.eaten) coin(c.x, cy, t);
-      else if (c.pop > 0) {
-        g.fillStyle = `rgba(255, 225, 77, ${c.pop})`;
+      if (!c.eaten) {
+        if (c.kind === 'coin') coin(c.x, cy, t);
+        else treat(c.kind, c.x, cy - 1, t);
+      } else if (c.pop > 0) {
+        const text = c.kind === 'coin' ? '+1' : TREATS[c.kind].say[lang()];
+        g.fillStyle = c.kind === 'coin' ? `rgba(255, 225, 77, ${c.pop})` : `rgba(255, 138, 198, ${c.pop})`;
         g.font = '8px "Press Start 2P", monospace';
-        g.fillText('+1', c.x - 7, cy - 12 - (1 - c.pop) * 10);
+        const tw = g.measureText(text).width;
+        g.fillText(text, Math.min(w - tw - 2, Math.max(2, c.x - tw / 2)), cy - 12 - (1 - c.pop) * 10);
       }
     }
     const frame = Math.floor(t / 140) % 2;
@@ -98,7 +139,7 @@ export function startDonate(canvas) {
       const mouthX = x + 11 * PX;
       for (const c of coins) {
         if (!c.eaten && mouthX >= c.x - 2 && x < c.x) { c.eaten = true; c.pop = 1; }
-        if (c.pop > 0) c.pop = Math.max(0, c.pop - dt * 1.6);
+        if (c.pop > 0) c.pop = Math.max(0, c.pop - dt * (c.kind === 'coin' ? 1.6 : 0.8));
       }
       if (coins.length && coins.every(c => c.eaten)) {
         if (!respawnAt) respawnAt = t + 1200;
