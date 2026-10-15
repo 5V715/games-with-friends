@@ -1,7 +1,7 @@
 {
-  "name": "Games with Friends",
-  "short_name": "Games",
-  "description": "Rommé, UNO and Monopoly Deal with friends, browser to browser",
+  "name": "Silas Arcade",
+  "short_name": "Silas Arcade",
+  "description": "Rommé, 1!, Monopoly Deal, Bomber Buben and Stacked with friends, browser to browser",
   "start_url": "./",
   "scope": "./",
   "display": "standalone",

@@ -1,4 +1,4 @@
-// Games with Friends signaling server: a tiny WebRTC signaling relay with no dependencies.
+// Silas Arcade signaling server: a tiny WebRTC signaling relay with no dependencies.
 //
 // The game itself is a static site (public/). It can live on GitHub Pages,
 // or this server serves it too (SERVE_GAME, on by default when the files are
@@ -294,7 +294,7 @@ const server = http.createServer((req, res) => {
 });
 
 server.listen(PORT, HOST, () => {
-  console.log(`Games with Friends signaling server on http://${HOST}:${PORT} (allowed origins: ${ALLOWED_ORIGINS.join(', ')}; ` +
+  console.log(`Silas Arcade signaling server on http://${HOST}:${PORT} (allowed origins: ${ALLOWED_ORIGINS.join(', ')}; ` +
     `room idle timeout: ${ROOM_IDLE_MS > 0 ? ROOM_IDLE_MS / 60000 + ' min' : 'off'}; admin: ${ADMIN_TOKEN ? 'on' : 'off'}; ` +
     `game: ${SERVE_GAME ? 'served from ' + PUBLIC_DIR : 'not served'})`);
 });

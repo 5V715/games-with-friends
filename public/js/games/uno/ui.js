@@ -51,7 +51,7 @@ export function createUnoUI(ctx) {
         <span class="mini-back uno-back">${p.count}</span>
         <span class="meta">
           <span class="oname">${esc(p.id === view.you ? t('game.you') : p.name)}</span>
-          <span class="osub">${esc(t('game.pts', { n: p.score }))}${p.uno ? ' · <b class="uno-tag">UNO!</b>' : ''}</span>
+          <span class="osub">${esc(t('game.pts', { n: p.score }))}${p.uno ? ' · <b class="uno-tag">1!</b>' : ''}</span>
         </span>
         <span class="link-dot ${ctx.dotClass(p)}"></span>`;
       box.append(el);
@@ -66,7 +66,7 @@ export function createUnoUI(ctx) {
     board.className = `uno-board glow-${view.color || 'none'}`;
     const deck = document.createElement('button');
     deck.className = 'uno-deck' + (myTurn() && !view.drawn ? ' active' : '');
-    deck.innerHTML = `<span class="ucard back"><span class="u-oval"><span class="u-sym">UNO</span></span></span><span class="pile-count">${view.deckCount}</span>`;
+    deck.innerHTML = `<span class="ucard back"><span class="u-oval"><span class="u-sym">1!</span></span></span><span class="pile-count">${view.deckCount}</span>`;
     deck.onclick = () => {
       if (!myTurn()) return toast(t('toast.waitTurn'));
       act({ type: 'draw' });

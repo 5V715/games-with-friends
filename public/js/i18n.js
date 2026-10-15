@@ -86,7 +86,7 @@ const STRINGS = {
 
     // ---- home
     'game.romme': 'Rommé',
-    'home.tagline': 'Rommé, UNO, Monopoly Deal, Bomber Buben and Stacked with your friends — browser to browser, no account needed.',
+    'home.tagline': 'Rommé, 1!, Monopoly Deal, Bomber Buben and Stacked with your friends — browser to browser, no account needed.',
     'home.source': 'Source code on GitHub',
     'home.pickGame': 'Choose a game',
     'home.name': 'Your name',
@@ -119,7 +119,7 @@ const STRINGS = {
     'lobby.remove': 'Remove',
     'lobby.connecting': 'Connecting to host…',
     'lobby.youHost': 'You are the host',
-    'lobby.shareText': 'Join my table at Games with Friends: {room}',
+    'lobby.shareText': 'Join my table at Silas Arcade: {room}',
     // ---- connection chips
     'conn.host': 'host',
     'conn.bot': 'bot',
@@ -273,7 +273,7 @@ const STRINGS = {
     'toast.relayNeedsTurn': 'Relay-only needs a TURN server',
     'toast.turnUrl': 'TURN URLs start with turn: or turns:',
     'toast.saved': 'Saved — applies to new connections',
-    'code.notCode': 'Not a Games with Friends connection code',
+    'code.notCode': 'Not a Silas Arcade connection code',
     'code.isReply': "That is a reply code — paste the host's invite code",
     'code.isInvite': "That is an invite code — paste the guest's reply code",
     // ---- rules (HTML)
@@ -356,7 +356,7 @@ const STRINGS = {
     'log.gameOver': 'Spiel vorbei — {names} gewinnt mit {points} Punkten',
 
     'game.romme': 'Rommé',
-    'home.tagline': 'Rommé, UNO, Monopoly Deal, Bomber Buben und Stacked mit Freunden — direkt von Browser zu Browser, ohne Konto.',
+    'home.tagline': 'Rommé, 1!, Monopoly Deal, Bomber Buben und Stacked mit Freunden — direkt von Browser zu Browser, ohne Konto.',
     'home.source': 'Quellcode auf GitHub',
     'home.pickGame': 'Wähle ein Spiel',
     'home.name': 'Dein Name',
@@ -388,7 +388,7 @@ const STRINGS = {
     'lobby.remove': 'Entfernen',
     'lobby.connecting': 'Verbinde mit dem Gastgeber…',
     'lobby.youHost': 'Du bist der Gastgeber',
-    'lobby.shareText': 'Komm an meinen Tisch bei Games with Friends: {room}',
+    'lobby.shareText': 'Komm an meinen Tisch bei Silas Arcade: {room}',
     'conn.host': 'Gastgeber',
     'conn.bot': 'Bot',
     'conn.relay': 'über TURN',
@@ -533,7 +533,7 @@ const STRINGS = {
     'toast.relayNeedsTurn': 'Nur-Relay braucht einen TURN-Server',
     'toast.turnUrl': 'TURN-URLs beginnen mit turn: oder turns:',
     'toast.saved': 'Gespeichert — gilt für neue Verbindungen',
-    'code.notCode': 'Das ist kein Verbindungscode von Games with Friends',
+    'code.notCode': 'Das ist kein Verbindungscode von Silas Arcade',
     'code.isReply': 'Das ist ein Antwortcode — füge den Einladungscode des Gastgebers ein',
     'code.isInvite': 'Das ist ein Einladungscode — füge den Antwortcode des Gastes ein',
     'rules.title': 'Spielregeln',

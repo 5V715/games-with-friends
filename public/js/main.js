@@ -1524,7 +1524,7 @@ function bind() {
     $('#btn-share').classList.remove('hint');
     const url = roomUrl(ui.room);
     if (navigator.share) {
-      try { await navigator.share({ title: 'Games with Friends', text: t('lobby.shareText', { room: ui.room }), url }); return; } catch { /* cancelled */ }
+      try { await navigator.share({ title: 'Silas Arcade', text: t('lobby.shareText', { room: ui.room }), url }); return; } catch { /* cancelled */ }
     }
     copyText(url);
   };
