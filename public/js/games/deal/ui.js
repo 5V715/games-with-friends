@@ -23,26 +23,35 @@ export function createDealUI(ctx) {
 
   // ---- card faces -----------------------------------------------------------
 
+  // "Berliner Plakat" cards: cream paper, a colour block on top like a street
+  // sign, condensed poster type, the value in a black circle bottom right.
   function cardHtml(card, { small = false, color = null } = {}) {
     const v = card.value ? `<span class="d-val">${card.value}M</span>` : '';
-    const name = esc(L(cardLabel(card)));
+    // Long Berlin street names may break before "straße", "allee", … (soft hyphen).
+    const name = esc(L(cardLabel(card))).replace(/(\S{3,})(straße|allee|damm|platz|markt|kreuz|brunnen)\b/gi, '$1\u00ad$2');
+    const cls = (extra) => `dcard ${extra}${small ? ' small' : ''}`;
+    const colorsText = (cs) => esc(cs === 'any' ? t('deal.label.anyColor') : cs.map(colorName).join(' / '));
+    const split = (cs) => (cs === 'any'
+      ? '<span class="d-split rainbow"></span>'
+      : `<span class="d-split">${cs.map(c => `<span class="col-${c}"></span>`).join('')}</span>`);
     switch (card.type) {
       case 'money':
-        return `<div class="dcard d-money${small ? ' small' : ''}">${v}<span class="d-big">${card.value}M</span></div>`;
-      case 'prop':
-        return `<div class="dcard d-prop${small ? ' small' : ''}"><span class="d-band col-${card.color}"><span class="d-street">${name}</span></span>${v}${small ? '' : miniLadder(card.color)}</div>`;
+        return `<div class="${cls('d-money')}"><span class="d-big">${card.value}M</span></div>`;
+      case 'prop': {
+        const sign = card.color === 'rail' ? '<span class="d-sbahn">S</span>' : `<small>${esc(colorName(card.color))}</small>`;
+        // Very long single words get a slightly smaller size so they fit the card.
+        const longest = Math.max(...L(cardLabel(card)).split(/[\s-]+/).map(w => w.replace(/(straße|allee|damm|platz|markt|kreuz|brunnen)$/i, '').length));
+        const fit = longest >= 12 ? ' xlong' : longest >= 10 ? ' long' : '';
+        return `<div class="${cls('d-prop')}"><span class="d-top col-${card.color}">${v}${sign}<b class="d-street${fit}">${name}</b></span>${small ? '' : miniLadder(card.color)}</div>`;
+      }
       case 'wild': {
-        const cs = card.colors === 'any' ? null : card.colors;
-        const band = cs ? `<span class="d-band split"><span class="col-${cs[0]}"></span><span class="col-${cs[1]}"></span></span>` : '<span class="d-band rainbow"></span>';
         const on = color ? `<span class="d-on">→ ${esc(colorName(color))}</span>` : '';
-        return `<div class="dcard d-wild${small ? ' small' : ''}">${band}${v}<span class="d-name">${name}</span>${on}</div>`;
+        return `<div class="${cls('d-wild')}">${split(card.colors)}<span class="d-body"><b class="d-say">${esc(t('deal.label.wild'))}</b><span class="d-name">${colorsText(card.colors)}</span>${on}</span>${v}</div>`;
       }
-      case 'rent': {
-        const dots = card.colors === 'any' ? '<span class="dot rainbow"></span>' : card.colors.map(c => `<span class="dot col-${c}"></span>`).join('');
-        return `<div class="dcard d-rent${small ? ' small' : ''}">${v}<span class="d-dots">${dots}</span><span class="d-name">${name}</span></div>`;
-      }
+      case 'rent':
+        return `<div class="${cls('d-rent')}">${split(card.colors)}<span class="d-body"><b class="d-say">${esc(t('deal.label.rent'))}</b><span class="d-name">${colorsText(card.colors)}</span></span>${v}</div>`;
       default:
-        return `<div class="dcard d-action a-${card.action}${small ? ' small' : ''}">${v}<span class="d-name">${name}</span></div>`;
+        return `<div class="${cls(`d-action a-${card.action}`)}"><span class="d-top">${v}<small>${esc(t('deal.label.action'))}</small><b class="d-street">${name}</b></span>${small ? '' : `<span class="d-name d-desc">${esc(t('deal.desc.' + card.action))}</span>`}</div>`;
     }
   }
 
