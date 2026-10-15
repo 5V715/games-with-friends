@@ -112,6 +112,21 @@ const BOMB = withPixels(mirror([
   '........',
 ]), [[4, 6, 'h'], [5, 6, 'h'], [3, 7, 'h'], [4, 7, 'h'], [3, 8, 'h'], [9, 2, 'u'], [10, 1, 'u']]);
 
+// Item icons, 12×12. k outline, w white, r red, o orange, y yellow, b blue,
+// c light blue, d dark grey, g grey, p pink.
+const ITEM_PAL = { k: '#16131c', w: '#ffffff', r: '#e8433a', o: '#ff9a2e', y: '#ffd84a', b: '#3a7bf0', c: '#8fe8ff', d: '#3a3f4e', g: '#9aa3b5', p: '#ff7ab8' };
+const ITEM_ART = {
+  B: { bg: '#ffe08a', plus: true, map: ['............', '.......y....', '......o.....', '.....kk.....', '...kkkkkk...', '..kkwwkkkk..', '..kwwkkkkk..', '..kkkkkkkk..', '..kkkkkkkk..', '...kkkkkk...', '....kkkk....', '............'] },
+  F: { bg: '#ffd0a0', plus: true, map: ['.....r......', '....rr......', '....ror.....', '...roor..r..', '...rooor.rr.', '..rooyoorrr.', '..royyyoor..', '..royyyyor..', '..royywyor..', '...ryyyyr...', '....rrrr....', '............'] },
+  X: { bg: '#e8433a', map: ['.....b......', '....bb......', '....bcb.....', '...bccb..b..', '...bcccb.bb.', '..bccwccbbb.', '..bcwwwccb..', '..bcwwwwcb..', '..bcwwwwcb..', '...bwwwwb...', '....bbbb....', '............'] },
+  S: { bg: '#ffd3e6', map: ['............', '...kkkk.....', '...kppk.....', '...kppk.....', '...kppkkk...', '...kpppppk..', '..kpppppppk.', '..kkkkkkkkk.', '...kgk.kgk..', '...kkk.kkk..', '............', '............'] },
+  K: { bg: '#cfe0ff', map: ['..kkkk......', '..kbbk......', '..kbbk......', '..kbbk......', '..kbbkkkk...', '..kbbbbbbk..', '.kbbbbbbbbk.', '.kwwwwwwwwk.', '.kkkkkkkkkk.', '............', '............', '............'] },
+  R: { bg: '#ffd9b0', map: ['.......k....', '.......k....', '......krk...', '...kkkkkkk..', '...kddddk...', '...kdrrdk...', '...kdrrdk...', '...kddddk...', '...kdggdk...', '...kkkkkk...', '............', '............'] },
+  D: { bg: '#e4d4f5', map: ['...kkkkkk...', '..kwwwwwwk..', '.kwwwwwwwwk.', '.kwkkwwkkwk.', '.kwkkwwkkwk.', '.kwwwkkwwwk.', '..kwwwwwwk..', '...kwkwkk...', '...kkkkkk...', '............', '............', '............'] },
+  P: { bg: '#ffc9c4', map: ['....kkkkk...', '...krrrrrk..', '..krrwrrrrk.', '..krrrrrrrk.', '..krrrrrrrk.', '..kkrrrrrrk.', '.krkkrrrrk..', '.krrrkkkk...', '..kwwwwk....', '..kwwwwk....', '..kkkkkk....', '............'] },
+  G: { bg: '#fff2b0', map: ['..k.k.k.....', '.kykykyk....', '.kykykyk.k..', '.kykykykyk..', '.kyyyyyyyk..', '.kyyyyyyk...', '..kyyyyyk...', '...kwwwk....', '...kwwwk....', '...kkkkk....', '............', '............'] },
+};
+
 function buildSprites() {
   const sp = { players: [] };
   const base = { o: '#11131d', v: '#1b2240', w: '#7ff3ff', f: '#2d2218', l: '#ffffff' };
@@ -164,20 +179,29 @@ function buildSprites() {
     }
   }
 
-  // Items: a framed tile with an icon.
-  const ICON = { B: '💣', F: '🔥', S: '⛸️', K: '👢', R: '📡', X: '🔥', D: '💀' };
-  const BG = { X: '#d8322a', D: '#3b2a4a' };
+  // Items: pixel-art chips (a coloured token with a 12×12 icon).
   sp.items = {};
+  sp.itemUrls = {};
+  const P = 5, ox = (CELL - 12 * P) / 2;
   for (const k of Object.keys(ITEMS)) {
+    const it = ITEM_ART[k];
     const c = canvas(CELL, CELL);
-    const b = c.getContext('2d');
-    b.fillStyle = '#2b1e0e'; b.fillRect(S, S, CELL - 2 * S, CELL - 2 * S);
-    b.fillStyle = BG[k] || '#f2d98a'; b.fillRect(2 * S, 2 * S, CELL - 4 * S, CELL - 4 * S);
-    b.font = `${CELL * 0.56}px system-ui, "Apple Color Emoji", "Segoe UI Emoji", sans-serif`;
-    b.textAlign = 'center';
-    b.textBaseline = 'middle';
-    b.fillText(ICON[k], CELL / 2, CELL / 2 + S);
+    const g = c.getContext('2d');
+    g.fillStyle = '#16131c'; g.fillRect(ox - 1, ox - 1, 12 * P + 2, 12 * P + 2);
+    g.fillStyle = it.bg; g.fillRect(ox + 2, ox + 2, 12 * P - 4, 12 * P - 4);
+    g.fillStyle = '#ffffff55'; g.fillRect(ox + 2, ox + 2, 12 * P - 4, 4);
+    it.map.forEach((row, y) => [...row].forEach((ch, x) => {
+      if (!ITEM_PAL[ch]) return;
+      g.fillStyle = ITEM_PAL[ch];
+      g.fillRect(ox + x * P, ox + y * P + 2, P, P);
+    }));
+    if (it.plus) {
+      const at = [[9, 0], [9, 1], [9, 2], [8, 1], [10, 1]];
+      g.fillStyle = '#16131c'; at.forEach(([x, y]) => g.fillRect(ox + x * P - 1, ox + y * P - 1, P + 2, P + 2));
+      g.fillStyle = '#ffffff'; at.forEach(([x, y]) => g.fillRect(ox + x * P, ox + y * P, P, P));
+    }
     sp.items[k] = c;
+    sp.itemUrls[k] = c.toDataURL();
   }
   return sp;
 }
@@ -235,6 +259,10 @@ function createSound() {
       else if (ev === 'die') tone('triangle', 600, 60, 0.6, 0.15);
       else if (ev === 'kick') tone('square', 200, 120, 0.05, 0.08);
       else if (ev === 'fall') tone('square', 140, 90, 0.05, 0.05);
+      else if (ev === 'punch' || ev === 'throw') tone('sawtooth', 260, 520, 0.12, 0.07);
+      else if (ev === 'grab') tone('square', 300, 420, 0.06, 0.06);
+      else if (ev === 'land') tone('triangle', 160, 90, 0.08, 0.1);
+      else if (ev === 'bonk') { tone('square', 900, 300, 0.15, 0.08); setTimeout(() => tone('square', 700, 250, 0.12, 0.06), 90); }
     },
   };
 }
@@ -297,7 +325,7 @@ export function createBomberUI(ctx) {
       me.y = s[1];
       me.facing = s[3] || 'd';
       me.fix = s[12];
-      me.pass = new Set(f.b.filter(b => overlaps(Math.round(b[0]), Math.round(b[1]))).map(b => cellKey(Math.round(b[0]), Math.round(b[1]))));
+      me.pass = new Set(f.b.filter(b => !b[4] && overlaps(Math.round(b[0]), Math.round(b[1]))).map(b => cellKey(Math.round(b[0]), Math.round(b[1]))));
       simAt = performance.now();
       me.on = true;
       return;
@@ -305,6 +333,7 @@ export function createBomberUI(ctx) {
     // A bomb that appears under us (usually our own) can be walked off.
     const before = new Set((old?.b || []).map(b => cellKey(Math.round(b[0]), Math.round(b[1]))));
     for (const b of f.b) {
+      if (b[4]) continue; // flying or carried
       const bx = Math.round(b[0]), by = Math.round(b[1]);
       if (!before.has(cellKey(bx, by)) && overlaps(bx, by)) me.pass.add(cellKey(bx, by));
     }
@@ -316,7 +345,7 @@ export function createBomberUI(ctx) {
     if (ch === '#' || ch === '+' || ch === '*') return false;
     const key = cellKey(x, y);
     if (me.pass.has(key)) return true;
-    return !cur.b.some(b => Math.round(b[0]) === x && Math.round(b[1]) === y);
+    return !cur.b.some(b => !b[4] && Math.round(b[0]) === x && Math.round(b[1]) === y);
   }
 
   function simulate(now) {
@@ -326,9 +355,9 @@ export function createBomberUI(ctx) {
     simAt += steps * (1000 / TPS);
     if (now - simAt > 200) simAt = now;
     const s = cur.p[myIndex()];
-    const disease = s[6], skates = s[9];
+    const disease = s[6], skates = s[9], dazed = s[15];
     for (let n = 0; n < steps; n++) {
-      let d = state.d;
+      let d = dazed ? null : state.d;
       if (d && disease === 'reverse') d = REVERSE[d];
       me.moving = false;
       if (d) {
@@ -498,24 +527,24 @@ export function createBomberUI(ctx) {
       }
     }
 
-    // Bombs (interpolated while sliding).
+    // Bombs (interpolated while sliding or flying; flying ones higher, with a shadow).
     const prevBombs = prev?.b || [];
+    const lifted = [];
     for (const b of f.b) {
-      const old = prevBombs.find(o => Math.abs(o[0] - b[0]) <= 1 && Math.abs(o[1] - b[1]) <= 1 && (o[0] === b[0] || o[1] === b[1]));
+      const old = prevBombs.find(o => Math.abs(o[0] - b[0]) <= 1 && Math.abs(o[1] - b[1]) <= 1);
       const bx = old ? lerp(old[0], b[0], k) : b[0];
-      const by = old ? lerp(old[1], b[1], k) : b[1];
-      const pulse = b[3] ? (f.n >> 4) % 2 : (b[2] < 40 ? (f.n >> 2) % 2 : (f.n >> 4) % 2);
-      const img = b[3] ? sprites.remote : sprites.bomb;
-      const sz = pulse ? CELL - 2 * S : CELL;
-      const off = (CELL - sz) / 2;
-      g.drawImage(img, bx * CELL + off, by * CELL + off, sz, sz);
-      // Spark on the fuse.
-      g.fillStyle = (f.n >> 1) % 2 ? '#ffe14a' : '#ff7a1a';
-      g.fillRect(bx * CELL + 11 * S - off / 2, by * CELL + off, 2 * S, 2 * S);
-      if (b[3]) {
-        g.fillStyle = (f.n >> 3) % 2 ? '#ff3b3b' : '#7a0d0d';
-        g.fillRect(bx * CELL + 7 * S, by * CELL + 8 * S, 2 * S, 2 * S);
+      let by = old ? lerp(old[1], b[1], k) : b[1];
+      const h = b[4] || 0;
+      if (h) {
+        g.fillStyle = 'rgba(0,0,0,.3)';
+        g.beginPath();
+        g.ellipse(bx * CELL + CELL / 2, by * CELL + CELL * 0.82, CELL * 0.3 * (1 - h * 0.4), CELL * 0.1, 0, 0, Math.PI * 2);
+        g.fill();
+        by -= h * 0.9;
+        // Carried bombs are drawn after the players, above their heads.
+        if (b[5]) { lifted.push([b, bx, by]); continue; }
       }
+      drawBomb(g, b, bx, by, f);
     }
 
     drawFlames(f);
@@ -547,6 +576,14 @@ export function createBomberUI(ctx) {
         g.drawImage(img, dx, dy);
       }
       g.restore();
+      // Dazed: little stars circling the head.
+      if (alive && p[15]) {
+        for (let s2 = 0; s2 < 3; s2++) {
+          const a = f.n / 8 + s2 * 2.1;
+          g.fillStyle = '#ffe14a';
+          g.fillRect(px * CELL + Math.cos(a) * CELL * 0.35 - S, dy + Math.sin(a) * S * 2 - S, 2 * S, 2 * S);
+        }
+      }
       // Marker over your own head.
       if (alive && view?.players?.[i]?.id === view?.you) {
         g.fillStyle = '#fff';
@@ -557,7 +594,23 @@ export function createBomberUI(ctx) {
         g.fill();
       }
     }
+    for (const [b, bx, by] of lifted) drawBomb(g, b, bx, by, f);
     renderHud();
+  }
+
+  function drawBomb(g, b, bx, by, f) {
+    const pulse = b[3] ? (f.n >> 4) % 2 : (b[2] < 40 ? (f.n >> 2) % 2 : (f.n >> 4) % 2);
+    const img = b[3] ? sprites.remote : sprites.bomb;
+    const sz = pulse ? CELL - 2 * S : CELL;
+    const off = (CELL - sz) / 2;
+    g.drawImage(img, bx * CELL + off, by * CELL + off, sz, sz);
+    // Spark on the fuse.
+    g.fillStyle = (f.n >> 1) % 2 ? '#ffe14a' : '#ff7a1a';
+    g.fillRect(bx * CELL + 11 * S - off / 2, by * CELL + off, 2 * S, 2 * S);
+    if (b[3]) {
+      g.fillStyle = (f.n >> 3) % 2 ? '#ff3b3b' : '#7a0d0d';
+      g.fillRect(bx * CELL + 7 * S, by * CELL + 8 * S, 2 * S, 2 * S);
+    }
   }
 
   function drawBurning(px, py, n) {
@@ -612,8 +665,9 @@ export function createBomberUI(ctx) {
     }).join('');
     let stats = '';
     if (mine) {
-      const [, , , , , , disease, bombs, fire, skates, kick, remote] = mine;
-      stats = `<span class="bm-stats">💣${bombs} 🔥${fire} ⛸️${skates}${kick ? ' 👢' : ''}${remote ? ' 📡' : ''}${disease ? ` <em>💀 ${esc(t('bomber.disease.' + disease))}</em>` : ''}</span>`;
+      const [, , , , , , disease, bombs, fire, skates, kick, remote, , punch, grab] = mine;
+      const icon = (k) => `<img class="bm-ico" src="${sprites.itemUrls[k]}" alt="">`;
+      stats = `<span class="bm-stats">${icon('B')}${bombs} ${icon('F')}${fire} ${icon('S')}${skates}${kick ? icon('K') : ''}${remote ? icon('R') : ''}${punch ? icon('P') : ''}${grab ? icon('G') : ''}${disease ? ` <em>${icon('D')} ${esc(t('bomber.disease.' + disease))}</em>` : ''}</span>`;
     }
     hud.innerHTML = `<span class="bm-round">${esc(t('bomber.round', { round: view.round }))}</span>${chips}<span class="bm-clock${secs <= 0 && f.t > 0 ? ' hurry' : ''}">${clock}</span>${stats}`;
     renderOverlay();

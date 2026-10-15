@@ -19,7 +19,7 @@ host can still switch in the lobby.
 | --- | --- | --- |
 | **Rommé** | 2–6 | German rummy: sets and runs, 40 to come out, cutting the deck, Hand ×2, majority vote between rounds |
 | **UNO** | 2–8 | Match color/number/symbol, Skip/Reverse/+2/Wild/Wild +4, call UNO or get caught (+2), first to 500 |
-| **Bomber Buben** | 1–4 | Real-time bomb battle in the classic 15×13 arena, best of 3; on-screen D-pad with A/B (hold the phone sideways) or keyboard; items: bomb up, fire up, full fire, skate, kick, remote, skull; falling blocks after 2 minutes |
+| **Bomber Buben** | 1–4 | Real-time bomb battle in the classic 15×13 arena, best of 3; on-screen D-pad with A/B (hold the phone sideways) or keyboard; items: bomb up, fire up, full fire, skate, kick, remote, boxing glove, throw glove, skull; falling blocks after 2 minutes |
 | **Stacked** | 1–4 | Versus falling blocks, best of 3: clear lines to send garbage, T-spins, combos, back-to-back; hold and 5-piece preview; the others' wells shown small (red flash + number when they clear, a streak shows where garbage goes); whole-screen touch gestures or keyboard |
 | **Monopoly Deal** | 2–5 | Three complete property sets win; real street names (US/German edition by language), tap any card or set for its rent ladder; rent, Debt Collector, Birthday, Sly/Forced Deal, Deal Breaker, Just Say No, houses/hotels |
 

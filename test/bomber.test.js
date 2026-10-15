@@ -135,3 +135,40 @@ test('a bomb dropped with a position report lands at that position', () => {
   assert.equal(g.bombs.length, 1);
   assert.equal(g.bombs[0].x, Math.floor(p.x));
 });
+
+test('boxing glove punches the bomb in front three cells over walls', () => {
+  const g = emptyArena();
+  const p = g.player('p0');
+  p.punch = true;
+  p.x = 1.5; p.y = 1.5; p.facing = 'r';
+  g.grid[idx(3, 1)] = SOFT; // in the way, flown over
+  g.setInput('p0', { a: 0, b: 0 });
+  g.setInput('p0', { a: 1, b: 0 }); g.tick();          // bomb at (1,1)
+  p.x = 1.5; p.y = 1.5;
+  g.bombs[0].x = 2; g.bombs[0].passers.clear();         // put it in front of the player
+  g.setInput('p0', { a: 1, b: 1 }); g.tick();          // punch
+  assert.ok(g.bombs[0].air, 'flying');
+  assert.equal(g.bombs[0].x, 5);
+  for (let i = 0; i < 30; i++) g.tick();
+  assert.equal(g.bombs[0].air, null, 'landed');
+  assert.deepEqual([g.bombs[0].x, g.bombs[0].y], [5, 1]);
+});
+
+test('throw glove: pick up the bomb you stand on, throw it, bonk a player', () => {
+  const g = emptyArena();
+  const [p, o] = g.players;
+  p.grab = true;
+  p.x = 1.5; p.y = 1.5; p.facing = 'r';
+  o.x = 4.5; o.y = 1.5;
+  g.setInput('p0', { a: 0, b: 0 });
+  g.setInput('p0', { a: 1, b: 0 }); g.tick();
+  g.setInput('p0', { a: 1, b: 1 }); g.tick();          // pick up
+  assert.equal(g.bombs[0].carrier, 'p0');
+  g.setInput('p0', { a: 2, b: 1 }); g.tick();          // can't drop another while carrying
+  assert.equal(g.bombs.length, 1);
+  g.setInput('p0', { a: 2, b: 2 }); g.tick();          // throw → lands on o at (4,1)
+  assert.ok(g.bombs[0].air);
+  for (let i = 0; i < 20; i++) g.tick();
+  assert.ok(o.stun > 0 || g.bombs[0].x === 5, 'bounced off the player');
+  assert.equal(g.bombs[0].x, 5);
+});

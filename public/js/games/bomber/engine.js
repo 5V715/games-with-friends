@@ -43,9 +43,12 @@ const MAX_FIRE = 8;
 
 // Items. Letters are used in the frame's grid string.
 export const ITEMS = {
-  B: 'bomb', F: 'fire', S: 'speed', K: 'kick', R: 'remote', X: 'fullFire', D: 'skull',
+  B: 'bomb', F: 'fire', S: 'speed', K: 'kick', R: 'remote', X: 'fullFire', D: 'skull', P: 'punch', G: 'grab',
 };
-const ITEM_POOL = { B: 10, F: 10, S: 5, K: 3, R: 2, X: 1, D: 3 };
+const ITEM_POOL = { B: 10, F: 10, S: 5, K: 3, R: 2, X: 1, D: 3, P: 2, G: 2 };
+const FLY_CELLS = 3; // punched or thrown bombs fly this far (over everything)
+const FLY_TICKS = 6; // per cell
+const STUN_TICKS = 50; // a bomb landing on your head
 export const DISEASES = ['slow', 'fast', 'short', 'noBomb', 'diarrhea', 'reverse'];
 
 export const STARTS = [[1, 1], [13, 11], [13, 1], [1, 11]];
@@ -241,7 +244,7 @@ export class BomberGame {
       const [x, y] = STARTS[n];
       Object.assign(p, {
         slot: n, x: x + 0.5, y: y + 0.5, alive: true, diedAt: null, facing: 'd', moving: false,
-        bombs: 1, fire: 2, skates: 0, kick: false, remote: false, disease: null, diseaseLeft: 0,
+        bombs: 1, fire: 2, skates: 0, kick: false, remote: false, punch: false, grab: false, stun: 0, disease: null, diseaseLeft: 0,
         input: { d: null }, claim: null, budget: 0, fix: (p.fix || 0) + 1,
       });
     });
@@ -306,8 +309,9 @@ export class BomberGame {
     return this.grid[idx(x, y)];
   }
 
+  // Bombs lying on the ground (not flying, not carried).
   bombAt(x, y) {
-    return this.bombs.find(b => b.x === x && b.y === y);
+    return this.bombs.find(b => b.x === x && b.y === y && !b.air && !b.carrier);
   }
 
   // Can player p walk into cell (x, y)?
@@ -336,6 +340,7 @@ export class BomberGame {
     }
     for (const p of this.players) if (p.alive) this.#movePlayer(p);
     this.#slideBombs();
+    this.#flyBombs();
     this.#fuses();
     this.#updateFlames();
     this.#hurryUp();
@@ -344,9 +349,17 @@ export class BomberGame {
   }
 
   #movePlayer(p) {
+    if (p.stun > 0) {
+      // Dazed by a bomb on the head: no moving, no bombs for a moment.
+      p.stun--;
+      p.moving = false;
+      p.input = { d: p.input.d };
+      p.claim = null;
+      return;
+    }
     let d = p.input.d;
     if (d && p.disease === 'reverse') d = REVERSE[d];
-    const wantBomb = (p.input.a || p.disease === 'diarrhea') && p.disease !== 'noBomb';
+    const wantBomb = (p.input.a || p.disease === 'diarrhea') && p.disease !== 'noBomb' && !this.#carried(p);
     p.moving = false;
     // Budget for how far a guest's own prediction may move the player.
     p.budget = Math.min((p.budget || 0) + this.speed(p), this.speed(p) * CLAIM_SLACK);
@@ -420,6 +433,10 @@ export class BomberGame {
     this.events.push('kick');
   }
 
+  #carried(p) {
+    return this.bombs.find(b => b.carrier === p.id);
+  }
+
   #placeBomb(p) {
     const x = Math.floor(p.x), y = Math.floor(p.y);
     if (this.cellAt(x, y) !== EMPTY || this.bombAt(x, y)) return;
@@ -436,13 +453,83 @@ export class BomberGame {
     this.events.push('drop');
   }
 
-  // B: detonate the oldest remote bomb, or stop your bomb that is sliding.
+  // B does whatever fits right now: throw the bomb you carry, stop your
+  // sliding bomb, pick up the bomb you stand on (throw glove), punch the bomb
+  // in front of you (boxing glove), or set off your oldest remote bomb.
   #special(p) {
+    const [dx, dy] = DIRS[p.facing] || [0, 1];
+    const cx = Math.floor(p.x), cy = Math.floor(p.y);
+    const held = this.#carried(p);
+    if (held) {
+      held.carrier = null;
+      this.#launch(held, cx, cy, dx, dy, FLY_CELLS);
+      this.events.push('throw');
+      return;
+    }
     const sliding = this.bombs.find(b => b.slide && b.kickedBy === p.id);
     if (sliding) { sliding.slide = null; sliding.progress = 0; return; }
+    if (p.grab) {
+      const under = this.bombAt(cx, cy);
+      if (under && !under.slide) {
+        under.carrier = p.id;
+        under.passers.clear();
+        this.events.push('grab');
+        return;
+      }
+    }
+    if (p.punch) {
+      const front = this.bombAt(cx + dx, cy + dy);
+      if (front && !front.slide) {
+        this.#launch(front, front.x, front.y, dx, dy, FLY_CELLS);
+        this.events.push('punch');
+        return;
+      }
+    }
     if (p.remote) {
-      const b = this.bombs.find(b => b.owner === p.id && b.remote);
+      const b = this.bombs.find(b => b.owner === p.id && b.remote && !b.carrier);
       if (b) this.#explode([b]);
+    }
+  }
+
+  // Inner cells wrap around: a bomb flying off one side comes in on the other.
+  #wrap(x, y) {
+    const iw = W - 2, ih = H - 2;
+    return [((x - 1) % iw + iw) % iw + 1, ((y - 1) % ih + ih) % ih + 1];
+  }
+
+  // Sends a bomb flying `cells` cells from (x, y); it lands on the next free cell.
+  #launch(b, x, y, dx, dy, cells) {
+    const [tx, ty] = this.#wrap(x + dx * cells, y + dy * cells);
+    b.slide = null;
+    b.progress = 0;
+    b.air = { fx: x, fy: y, dx, dy, t: 0, dur: FLY_TICKS * cells };
+    b.x = tx;
+    b.y = ty;
+    b.passers.clear();
+  }
+
+  #flyBombs() {
+    for (const b of this.bombs) {
+      if (b.carrier) {
+        const c = this.player(b.carrier);
+        if (!c?.alive) { b.carrier = null; continue; }
+        b.x = Math.floor(c.x);
+        b.y = Math.floor(c.y);
+        continue;
+      }
+      if (!b.air) continue;
+      if (++b.air.t < b.air.dur) continue;
+      const blocked = this.cellAt(b.x, b.y) !== EMPTY || this.bombAt(b.x, b.y);
+      const hitPlayer = this.players.find(o => o.alive && Math.floor(o.x) === b.x && Math.floor(o.y) === b.y);
+      if (hitPlayer) { hitPlayer.stun = STUN_TICKS; this.events.push('bonk'); }
+      if (blocked || hitPlayer) {
+        // Bounce on: one more cell in the same direction.
+        this.#launch(b, b.x, b.y, b.air.dx, b.air.dy, 1);
+        continue;
+      }
+      b.air = null;
+      this.events.push('land');
+      if (this.flames.has(idx(b.x, b.y))) b.fuse = 1;
     }
   }
 
@@ -468,7 +555,8 @@ export class BomberGame {
   #fuses() {
     const due = [];
     for (const b of this.bombs) {
-      if (b.remote) continue;
+      if (b.remote && !b.air) continue;
+      if (b.air) { b.fuse = Math.max(1, b.fuse - 1); continue; } // goes off when it lands
       if (--b.fuse <= 0) due.push(b);
     }
     if (due.length) this.#explode(due);
@@ -478,7 +566,8 @@ export class BomberGame {
     queue = [...queue];
     while (queue.length) {
       const b = queue.shift();
-      if (!this.bombs.includes(b)) continue;
+      if (!this.bombs.includes(b) || b.air) continue;
+      // A carried bomb goes off in the carrier's hands.
       this.bombs = this.bombs.filter(o => o !== b);
       this.events.push('boom');
       this.#flame(b.x, b.y);
@@ -516,7 +605,7 @@ export class BomberGame {
       if (item) { this.items.set(i, item); this.hidden.delete(i); }
     }
     // Bombs caught by a flame (e.g. one that was kicked into it) go off.
-    const hit = this.bombs.filter(b => this.flames.has(idx(b.x, b.y)));
+    const hit = this.bombs.filter(b => !b.air && this.flames.has(idx(b.x, b.y)));
     if (hit.length) this.#explode(hit);
   }
 
@@ -569,6 +658,8 @@ export class BomberGame {
       case 'S': p.skates = Math.min(MAX_SKATES, p.skates + 1); break;
       case 'K': p.kick = true; break;
       case 'R': p.remote = true; break;
+      case 'P': p.punch = true; break;
+      case 'G': p.grab = true; break;
       case 'D':
         p.disease = DISEASES[Math.floor(this.rnd() * DISEASES.length)];
         p.diseaseLeft = DISEASE_TICKS;
@@ -584,6 +675,8 @@ export class BomberGame {
     this.events.push('die');
     // Remote bombs of a fallen player go off on their own.
     for (const b of this.bombs) if (b.owner === p.id && b.remote) { b.remote = false; b.fuse = Math.min(b.fuse, FUSE); }
+    // A carried bomb drops where the player fell.
+    for (const b of this.bombs) if (b.carrier === p.id) b.carrier = null;
   }
 
   #checkEnd() {
@@ -631,8 +724,22 @@ export class BomberGame {
       grid,
       p: this.players.map(p => [r2(p.x), r2(p.y), p.alive ? 1 : 0, p.facing, p.moving ? 1 : 0,
         p.diedAt == null ? 0 : this.tickNo - p.diedAt, p.disease || '',
-        p.bombs, p.fire, p.skates, p.kick ? 1 : 0, p.remote ? 1 : 0, p.fix]),
-      b: this.bombs.map(b => [r2(b.x + (b.slide ? b.slide[0] * b.progress : 0)), r2(b.y + (b.slide ? b.slide[1] * b.progress : 0)), b.fuse, b.remote ? 1 : 0]),
+        p.bombs, p.fire, p.skates, p.kick ? 1 : 0, p.remote ? 1 : 0, p.fix,
+        p.punch ? 1 : 0, p.grab ? 1 : 0, p.stun > 0 ? 1 : 0]),
+      // [x, y, fuse, remote, height above the ground (flying or carried), carried]
+      b: this.bombs.map(b => {
+        if (b.carrier) {
+          const c = this.player(b.carrier);
+          return [r2(c.x - 0.5), r2(c.y - 0.5), b.fuse, b.remote ? 1 : 0, 0.6, 1];
+        }
+        if (b.air) {
+          const k = b.air.t / b.air.dur;
+          const far = Math.abs(b.x - b.air.fx) + Math.abs(b.y - b.air.fy) > FLY_CELLS + 1; // wrapped round
+          const x = far ? b.x : b.air.fx + (b.x - b.air.fx) * k, y = far ? b.y : b.air.fy + (b.y - b.air.fy) * k;
+          return [r2(x), r2(y), b.fuse, b.remote ? 1 : 0, r2(Math.max(0.15, Math.sin(Math.PI * k)))];
+        }
+        return [r2(b.x + (b.slide ? b.slide[0] * b.progress : 0)), r2(b.y + (b.slide ? b.slide[1] * b.progress : 0)), b.fuse, b.remote ? 1 : 0, 0];
+      }),
       f: [...this.flames].map(([i, n]) => [i, n]),
       e: this.events,
     };
