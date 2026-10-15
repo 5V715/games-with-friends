@@ -133,16 +133,17 @@
           <div class="cut-deck" id="cut-deck" role="slider" aria-label="Where to cut the deck" data-i18n-aria="cut.aria"></div>
         </div>
         <div class="melds" id="melds"></div>
-      </div>
-
-      <div class="piles">
-        <button class="pile stock" id="stock" data-drop="stock" aria-label="Draw from stock" data-i18n-aria="game.drawStock">
-          <div class="card back"></div>
-          <span class="pile-count" id="stock-count"></span>
-        </button>
-        <button class="pile discard" id="discard" data-drop="discard" aria-label="Discard pile" data-i18n-aria="game.discardPile"></button>
-        <div class="status" id="status"></div>
-        <button class="btn small primary pulse" id="btn-round-open" hidden></button>
+        <div class="centre" id="centre">
+          <div class="piles">
+            <button class="pile stock" id="stock" data-drop="stock" aria-label="Draw from stock" data-i18n-aria="game.drawStock">
+              <div class="card back"></div>
+              <span class="pile-count" id="stock-count"></span>
+            </button>
+            <button class="pile discard" id="discard" data-drop="discard" aria-label="Discard pile" data-i18n-aria="game.discardPile"></button>
+          </div>
+          <div class="status" id="status"></div>
+          <button class="btn small primary pulse" id="btn-round-open" hidden></button>
+        </div>
       </div>
 
       <div class="staging" id="staging" data-drop="stage" hidden>
