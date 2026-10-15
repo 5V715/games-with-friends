@@ -21,7 +21,7 @@ host can still switch in the lobby.
 | **1!** | 2–8 | UNO rules: match color/number/symbol, Skip/Reverse/+2/Wild/Wild +4, call "1!" or get caught (+2), first to 500 |
 | **Bomber Buben** | 1–4 | Real-time bomb battle in the classic 15×13 arena, best of 3; on-screen D-pad with A/B (hold the phone sideways) or keyboard; items: bomb up, fire up, full fire, skate, kick, remote, boxing glove, throw glove, skull; falling blocks after 2 minutes |
 | **Stacked** | 1–4 | Versus falling blocks, best of 3: clear lines to send garbage, T-spins, combos, back-to-back; hold and 5-piece preview; the others' wells shown small (red flash + number when they clear, a streak shows where garbage goes); whole-screen touch gestures or keyboard |
-| **Hegemony Deal** | 2–5 | Three complete property sets win; real street names (US/German edition by language), tap any card or set for its rent ladder; rent, Debt Collector, Birthday, Sly/Forced Deal, Deal Breaker, Just Say No, houses/hotels |
+| **Hegemony Deal** | 2–5 | Three complete property sets win; Berlin street names (stations: Ostkreuz, Westkreuz, Gesundbrunnen, Südkreuz), tap any card or set for its rent ladder; rent, Debt Collector, Birthday, Sly/Forced Deal, Deal Breaker, Just Say No, houses/hotels |
 
 Every game runs on the host's browser, has bots, works in German and English, and
 supports push to talk. 1! and Hegemony Deal follow the rules of UNO and Monopoly Deal, which are trademarks of Mattel and Hasbro.
