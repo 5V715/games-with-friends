@@ -409,14 +409,14 @@ body.is-host .guest-only { display: none !important; }
 
 .meld {
   display: flex;
-  padding: 6px 8px 6px calc(8px + var(--mw) * .5);
+  padding: 6px 8px 6px calc(8px + var(--mw) * .45);
   border-radius: 10px;
   background: rgba(0, 0, 0, .16);
   border: 2px dashed transparent;
   transition: background .15s, border-color .15s;
   cursor: pointer;
 }
-.meld .card { width: var(--mw); height: var(--mh); margin-left: calc(var(--mw) * -.5); font-size: calc(var(--mw) * .4); }
+.meld .card { width: var(--mw); height: var(--mh); margin-left: calc(var(--mw) * -.45); font-size: calc(var(--mw) * .44); }
 .meld.target { border-color: var(--gold); background: rgba(255, 225, 77, .14); }
 .meld.drop-hover { background: rgba(255, 225, 77, .3); }
 .meld.fresh { animation: flash 1s; }
@@ -438,22 +438,19 @@ body.is-host .guest-only { display: none !important; }
   box-shadow: var(--shadow);
   color: var(--black);
   flex: 0 0 auto;
-  font-size: calc(var(--cw) * .38);
+  font-size: calc(var(--cw) * .46);
   overflow: hidden;
 }
 .card.red { color: var(--red); }
+/* One big rank with one big suit under it, both in the top-left corner so
+   they stay readable when cards overlap. */
 .card .corner {
-  position: absolute; top: 3%; left: 5%;
-  display: flex; flex-direction: column; align-items: center;
-  font-weight: 800; line-height: .95; letter-spacing: -.04em;
+  position: absolute; top: 4%; left: 6%;
+  display: flex; flex-direction: column; align-items: center; gap: .08em;
+  font-weight: 800; line-height: .95; letter-spacing: -.08em;
 }
-.card .corner .s { font-size: .9em; }
-.card .pip {
-  position: absolute; right: 8%; bottom: 6%;
-  font-size: calc(var(--cw) * .55); line-height: 1;
-}
+.card .corner .s { letter-spacing: 0; }
 .card.joker { background: linear-gradient(160deg, #fff7d6, #ffe08a); color: #6b3fa0; }
-.card.joker .pip { font-size: calc(var(--cw) * .46); right: 10%; bottom: 10%; }
 .card .as {
   position: absolute; left: 50%; bottom: 3%; transform: translateX(-50%);
   font: 700 .55em/1 system-ui; padding: 2px 4px; border-radius: 4px;
@@ -1013,7 +1010,6 @@ dialog.sheet > .btn { width: 100%; }
 .scores tr.winner td { color: var(--gold); font-weight: 700; }
 .scores .left-cards { display: flex; flex-wrap: wrap; gap: 2px; margin-top: 4px; }
 .scores .left-cards .card { --cw: 26px; font-size: 10px; box-shadow: none; }
-.scores .left-cards .card .pip { display: none; }
 
 .menu-conn { font-size: 13px; color: var(--ink-dim); margin: 12px 0; }
 

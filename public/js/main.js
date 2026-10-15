@@ -125,7 +125,7 @@ function cardEl(card, slot) {
   el.dataset.id = card.id;
   if (card.joker) {
     el.classList.add('joker');
-    el.innerHTML = '<span class="corner"><span>★</span><span class="s">J</span></span><span class="pip">★</span>';
+    el.innerHTML = '<span class="corner"><span>★</span><span class="s">J</span></span>';
     if (slot) {
       const as = document.createElement('span');
       as.className = 'as';
@@ -136,7 +136,7 @@ function cardEl(card, slot) {
     if (RED_SUITS.has(card.suit)) el.classList.add('red');
     const r = rankName(card.rank);
     const s = SUIT_SYMBOL[card.suit];
-    el.innerHTML = `<span class="corner"><span>${r}</span><span class="s">${s}</span></span><span class="pip">${s}</span>`;
+    el.innerHTML = `<span class="corner"><span>${r}</span><span class="s">${s}</span></span>`;
   }
   return el;
 }
