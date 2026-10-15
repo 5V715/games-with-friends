@@ -276,6 +276,7 @@ function render() {
   renderPiles();
   renderStaging();
   renderHand();
+  fitMelds(); // again, now that the hand card size is known
   renderActions();
   renderCut();
   renderRoundOver();
@@ -578,6 +579,34 @@ function renderTable() {
     box.append(el);
   }
   ui.knownMelds = new Set(ui.view.melds.map(m => m.id));
+  fitMelds();
+}
+
+// Melds are shown as big as the hand cards while they fit on the table,
+// centred; with more melds they wrap and then shrink until everything fits.
+const MELD_MIN = 26;
+let meldMax = 62;
+
+function fitMelds() {
+  const box = $('#melds');
+  if (box.hidden || !box.clientHeight) return;
+  meldMax = $('#hand .card')?.offsetWidth || meldMax;
+  box.classList.add('measuring');
+  const fits = (mw) => {
+    box.style.setProperty('--mw', `${mw}px`);
+    return box.scrollHeight <= box.clientHeight + 1 && box.scrollWidth <= box.clientWidth + 1;
+  };
+  let lo = MELD_MIN, hi = meldMax;
+  if (fits(hi)) lo = hi;
+  else {
+    while (hi - lo > 1) {
+      const mid = (lo + hi) >> 1;
+      if (fits(mid)) lo = mid; else hi = mid;
+    }
+  }
+  const ok = fits(lo);
+  box.classList.remove('measuring');
+  box.classList.toggle('overflow', !ok);
 }
 
 function jokerSwapFor(meld, card) {
@@ -1691,6 +1720,8 @@ function bind() {
   $('#btn-save-settings').onclick = saveSettings;
 
   window.addEventListener('resize', () => layoutHand());
+  // The table grows and shrinks with the staging area and the hand.
+  new ResizeObserver(() => fitMelds()).observe($('#melds'));
 }
 
 function updateServerNote() {
