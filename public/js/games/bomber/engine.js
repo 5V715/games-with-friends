@@ -57,6 +57,9 @@ export const REVERSE = { u: 'd', d: 'u', l: 'r', r: 'l' };
 
 const fail = (key, params) => { throw new GameError(key, params); };
 const idx = (x, y) => y * W + x;
+// Continuous wrap over the inner cells (1 .. W-2 / H-2) for drawing flying bombs.
+const foldX = (x) => (((x - 1) % (W - 2)) + (W - 2)) % (W - 2) + 1;
+const foldY = (y) => (((y - 1) % (H - 2)) + (H - 2)) % (H - 2) + 1;
 
 // Spiral of all inner cells from the outside in (order of the falling blocks).
 export function spiral() {
@@ -733,9 +736,11 @@ export class BomberGame {
           return [r2(c.x - 0.5), r2(c.y - 0.5), b.fuse, b.remote ? 1 : 0, 0.6, 1];
         }
         if (b.air) {
+          // Fly along the unwrapped path and fold it back into the arena, so a
+          // bomb leaving one side is seen coming in on the other.
           const k = b.air.t / b.air.dur;
-          const far = Math.abs(b.x - b.air.fx) + Math.abs(b.y - b.air.fy) > FLY_CELLS + 1; // wrapped round
-          const x = far ? b.x : b.air.fx + (b.x - b.air.fx) * k, y = far ? b.y : b.air.fy + (b.y - b.air.fy) * k;
+          const dist = (b.air.dur / FLY_TICKS) * k;
+          const x = foldX(b.air.fx + b.air.dx * dist), y = foldY(b.air.fy + b.air.dy * dist);
           return [r2(x), r2(y), b.fuse, b.remote ? 1 : 0, r2(Math.max(0.15, Math.sin(Math.PI * k)))];
         }
         return [r2(b.x + (b.slide ? b.slide[0] * b.progress : 0)), r2(b.y + (b.slide ? b.slide[1] * b.progress : 0)), b.fuse, b.remote ? 1 : 0, 0];

@@ -172,3 +172,22 @@ test('throw glove: pick up the bomb you stand on, throw it, bonk a player', () =
   assert.ok(o.stun > 0 || g.bombs[0].x === 5, 'bounced off the player');
   assert.equal(g.bombs[0].x, 5);
 });
+
+test('a bomb punched over the edge is seen flying out and back in on the other side', () => {
+  const g = emptyArena();
+  const p = g.player('p0');
+  p.punch = true;
+  p.x = 12.5; p.y = 1.5; p.facing = 'r';
+  g.setInput('p0', { a: 0, b: 0 });
+  g.setInput('p0', { a: 1, b: 0 }); g.tick();
+  p.x = 12.5; p.y = 1.5;
+  g.bombs[0].x = 13; g.bombs[0].passers.clear();
+  g.setInput('p0', { a: 1, b: 1 }); g.tick();          // punch → lands on (3,1)
+  assert.equal(g.bombs[0].x, 3);
+  const xs = [];
+  while (g.bombs[0].air) { xs.push(g.frame().b[0][0]); g.tick(); }
+  const steps = xs.slice(1).map((x, i) => x - xs[i]);
+  assert.ok(xs.every(x => x >= 1 && x < W - 1), 'drawn inside the arena');
+  assert.equal(steps.filter(d => d < 0).length, 1, 'wraps exactly once');
+  assert.ok(steps.every(d => d >= 0 ? d < 0.5 : d < -(W - 4)), 'moves smoothly apart from the wrap');
+});

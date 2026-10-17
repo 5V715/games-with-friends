@@ -532,19 +532,28 @@ export function createBomberUI(ctx) {
     const lifted = [];
     for (const b of f.b) {
       const old = prevBombs.find(o => Math.abs(o[0] - b[0]) <= 1 && Math.abs(o[1] - b[1]) <= 1);
-      const bx = old ? lerp(old[0], b[0], k) : b[0];
-      let by = old ? lerp(old[1], b[1], k) : b[1];
       const h = b[4] || 0;
-      if (h) {
-        g.fillStyle = 'rgba(0,0,0,.3)';
-        g.beginPath();
-        g.ellipse(bx * CELL + CELL / 2, by * CELL + CELL * 0.82, CELL * 0.3 * (1 - h * 0.4), CELL * 0.1, 0, 0, Math.PI * 2);
-        g.fill();
-        by -= h * 0.9;
-        // Carried bombs are drawn after the players, above their heads.
-        if (b[5]) { lifted.push([b, bx, by]); continue; }
+      const x0 = old ? lerp(old[0], b[0], k) : b[0];
+      const y0 = old ? lerp(old[1], b[1], k) : b[1];
+      // A flying bomb crossing the arena edge shows on both sides at once.
+      const spots = [[x0, y0]];
+      if (h && !b[5]) {
+        if (x0 > W - 2) spots.push([x0 - (W - 2), y0]);
+        if (y0 > H - 2) spots.push([x0, y0 - (H - 2)]);
       }
-      drawBomb(g, b, bx, by, f);
+      for (const [bx, sy] of spots) {
+        let by = sy;
+        if (h) {
+          g.fillStyle = 'rgba(0,0,0,.3)';
+          g.beginPath();
+          g.ellipse(bx * CELL + CELL / 2, by * CELL + CELL * 0.82, CELL * 0.3 * (1 - h * 0.4), CELL * 0.1, 0, 0, Math.PI * 2);
+          g.fill();
+          by -= h * 0.9;
+          // Carried bombs are drawn after the players, above their heads.
+          if (b[5]) { lifted.push([b, bx, by]); continue; }
+        }
+        drawBomb(g, b, bx, by, f);
+      }
     }
 
     drawFlames(f);
