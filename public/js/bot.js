@@ -33,25 +33,23 @@ function candidateGroups(hand) {
     }
   }
 
-  // Runs: consecutive cards in one suit (the ace counts low and high).
+  // Runs: consecutive cards in one suit, around the corner too (K‑A‑2).
+  const next = (r, k) => ((r - 1 + k) % 13) + 1;
   for (const suit of ['S', 'H', 'D', 'C']) {
-    const byPos = new Map();
-    for (const c of naturals.filter(x => x.suit === suit)) {
-      if (!byPos.has(c.rank)) byPos.set(c.rank, c);
-      if (c.rank === 1 && !byPos.has(14)) byPos.set(14, c);
-    }
-    for (let start = 1; start <= 12; start++) {
+    const byRank = new Map();
+    for (const c of naturals.filter(x => x.suit === suit)) if (!byRank.has(c.rank)) byRank.set(c.rank, c);
+    for (let start = 1; start <= 13; start++) {
       const seq = [];
-      for (let r = start; r <= 14 && byPos.has(r); r++) {
-        seq.push(byPos.get(r));
+      for (let k = 0; k < 13 && byRank.has(next(start, k)); k++) {
+        seq.push(byRank.get(next(start, k)));
         if (seq.length >= 3) out.push(seq.slice());
       }
       // Two cards one apart, gap filled by a joker.
-      if (jokers.length && byPos.has(start) && byPos.has(start + 2) && !byPos.has(start + 1)) {
-        out.push([byPos.get(start), jokers[0], byPos.get(start + 2)]);
+      if (jokers.length && byRank.has(start) && byRank.has(next(start, 2)) && !byRank.has(next(start, 1))) {
+        out.push([byRank.get(start), jokers[0], byRank.get(next(start, 2))]);
       }
-      if (jokers.length && byPos.has(start) && byPos.has(start + 1)) {
-        out.push([byPos.get(start), byPos.get(start + 1), jokers[0]]);
+      if (jokers.length && byRank.has(start) && byRank.has(next(start, 1))) {
+        out.push([byRank.get(start), byRank.get(next(start, 1)), jokers[0]]);
       }
     }
   }

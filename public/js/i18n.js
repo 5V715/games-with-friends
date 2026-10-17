@@ -292,7 +292,7 @@ const STRINGS = {
       </ol>
       <h3>Melds</h3>
       <p><b>Set:</b> 3–4 cards of the same rank, all different suits (7♥ 7♠ 7♦).<br>
-         <b>Run:</b> 3+ cards in a row, same suit (4♣ 5♣ 6♣). Ace is low (A‑2‑3) or high (Q‑K‑A).<br>
+         <b>Run:</b> 3+ cards in a row, same suit (4♣ 5♣ 6♣). Ace is low (A‑2‑3), high (Q‑K‑A) or around the corner (K‑A‑2).<br>
          <b>Jokers</b> replace any card.</p>
       <h3>Coming out</h3>
       <p>Your first meld must be worth at least <b>40 points</b> (2–9 face value, 10/J/Q/K = 10, ace = 11 or 1 in A‑2‑3). Stage several groups and tap <i>Lay down</i>. Once you are out — and only on your turn — you may take from the discard pile, add cards to any meld on the table (select cards, tap the meld) and swap a joker for the card it stands for if you hold that card.</p>
@@ -552,7 +552,7 @@ const STRINGS = {
       </ol>
       <h3>Auslagen</h3>
       <p><b>Satz:</b> 3–4 Karten gleichen Werts in verschiedenen Farben (7♥ 7♠ 7♦).<br>
-         <b>Reihe:</b> 3+ aufeinanderfolgende Karten einer Farbe (4♣ 5♣ 6♣). Das Ass ist niedrig (A‑2‑3) oder hoch (D‑K‑A).<br>
+         <b>Reihe:</b> 3+ aufeinanderfolgende Karten einer Farbe (4♣ 5♣ 6♣). Das Ass ist niedrig (A‑2‑3), hoch (D‑K‑A) oder um die Ecke (K‑A‑2).<br>
          <b>Joker</b> ersetzen jede Karte.</p>
       <h3>Rauskommen</h3>
       <p>Deine erste Auslage muss mindestens <b>40 Punkte</b> wert sein (2–9 nach Augen, 10/B/D/K = 10, Ass = 11 bzw. 1 in A‑2‑3). Stelle mehrere Gruppen zusammen und tippe <i>Auslegen</i>. Bist du draußen — und nur wenn du dran bist —, darfst du vom Ablagestapel ziehen, Karten an jede Auslage anlegen (Karten wählen, Auslage antippen) und einen Joker gegen die Karte tauschen, für die er steht, wenn du sie hast.</p>

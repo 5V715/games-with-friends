@@ -1,8 +1,9 @@
 // Meld validation for Rommé.
 //
 // A meld is either a set (3–4 cards of equal rank, all suits different) or a
-// run (3+ consecutive cards of one suit; the ace may be low A‑2‑3 or high
-// Q‑K‑A, never around the corner). Jokers stand in for any missing card.
+// run (3+ consecutive cards of one suit; the ace may be low A‑2‑3, high
+// Q‑K‑A or in the middle, around the corner K‑A‑2). Jokers stand in for any
+// missing card.
 //
 // analyzeMeld() returns { type, slots, points } or null. `slots` is the meld
 // in display order; each slot records which rank/suit the card stands for, so
@@ -30,50 +31,49 @@ export function analyzeSet(cards) {
 }
 
 // `pinned` maps joker id -> rank (1..14) for jokers already placed in a run.
+// Runs may go around the corner (Q‑K‑A‑2): the 13 ranks form a circle. In a
+// slot, an ace right after a king has rank 14 (worth 11), otherwise rank 1.
 export function analyzeRun(cards, pinned = {}) {
-  if (cards.length < 3) return null;
+  if (cards.length < 3 || cards.length > 13) return null;
   const fixed = [];
   const free = [];
   for (const card of cards) {
     if (card.joker) {
-      if (pinned[card.id] != null) fixed.push({ card, rank: pinned[card.id], pinned: true });
+      if (pinned[card.id] != null) fixed.push({ card, rank: pinned[card.id] });
       else free.push(card);
     } else {
-      fixed.push({ card, rank: card.rank, pinned: false });
+      fixed.push({ card, rank: card.rank });
     }
   }
-  const naturals = fixed.filter(f => !f.pinned);
+  const naturals = fixed.filter(f => !f.card.joker);
   if (!naturals.length) return null;
   const suit = naturals[0].card.suit;
   if (naturals.some(f => f.card.suit !== suit)) return null;
 
-  const hasAce = naturals.some(f => f.card.rank === 1);
+  const n = cards.length;
+  const circle = (r) => (r === 14 ? 1 : r);
   let best = null;
-  for (const aceHigh of hasAce ? [false, true] : [false]) {
-    const placed = fixed.map(f => ({
-      card: f.card,
-      rank: !f.pinned && f.rank === 1 && aceHigh ? 14 : f.rank,
-    }));
-    const ranks = placed.map(p => p.rank);
-    if (new Set(ranks).size !== ranks.length) continue;
-    const min = Math.min(...ranks);
-    const max = Math.max(...ranks);
-    const gaps = max - min + 1 - placed.length;
-    if (gaps > free.length) continue;
-    const extra = free.length - gaps;
-    // Spare jokers extend the run upwards first (worth more), then downwards.
-    const hi = Math.min(extra, 14 - max);
-    const lo = extra - hi;
-    if (min - lo < 1) continue;
-    const byRank = new Map(placed.map(p => [p.rank, p.card]));
+  for (let start = 1; start <= 13; start++) {
+    // Ranks of the window start, start+1, … around the circle.
+    const ranks = Array.from({ length: n }, (_, i) => ((start - 1 + i) % 13) + 1);
+    const at = new Map(ranks.map((r, i) => [r, i]));
+    const cardAt = new Array(n).fill(null);
+    let ok = true;
+    for (const f of fixed) {
+      const i = at.get(circle(f.rank));
+      if (i == null || cardAt[i]) { ok = false; break; }
+      cardAt[i] = f.card;
+    }
+    if (!ok) continue;
     const jokers = free.slice();
     const slots = [];
     let points = 0;
-    for (let r = min - lo; r <= max + hi; r++) {
-      const card = byRank.get(r) || jokers.shift();
-      slots.push({ card, rank: r, suit });
-      points += positionValue(r);
-    }
+    ranks.forEach((r, i) => {
+      const rank = r === 1 && i > 0 ? 14 : r;
+      slots.push({ card: cardAt[i] || jokers.shift(), rank, suit });
+      points += positionValue(rank);
+    });
+    // Most points wins; on a tie keep spare jokers high (the earlier window).
     if (!best || points > best.points) best = { type: 'run', slots, points };
   }
   return best;

@@ -31,7 +31,7 @@ This is a private fan implementation with its own card designs.
 
 - Touch-first UI: tap to select, drag to reorder your hand, drag onto melds or the
   discard pile. Large touch targets, haptics, safe-area aware, installable (PWA manifest).
-- Full Rommé rules: 110 cards (2 decks + 6 jokers), sets and runs, ace low/high,
+- Full Rommé rules: 110 cards (2 decks + 6 jokers), sets and runs, ace low, high or around the corner (K‑A‑2),
   40-point first meld, laying off, joker swapping, Hand-Rommé (double penalty),
   voting on another round, and a score sheet.
 - Host-authoritative networking: the host's browser runs the game and sends each

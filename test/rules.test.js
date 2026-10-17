@@ -28,7 +28,10 @@ test('runs', () => {
   assert.equal(analyzeMeld(cards('5H 7H 8H')), null);
   assert.equal(analyzeMeld(cards('AH 2H 3H')).points, 6);
   assert.equal(analyzeMeld(cards('QH KH AH')).points, 31);
-  assert.equal(analyzeMeld(cards('KH AH 2H')), null, 'no wrap-around');
+  assert.equal(analyzeMeld(cards('KH AH 2H')).points, 23, 'around the corner, ace counts 11');
+  assert.deepEqual(labels(analyzeMeld(cards('AH 2H X'))), ['13H', '14H', '2H'], 'joker as king beats A-2-3');
+  assert.deepEqual(labels(analyzeMeld(cards('2H QH KH AH'))), ['12H', '13H', '14H', '2H']);
+  assert.equal(analyzeMeld(cards('KH AH 3H')), null, 'still needs consecutive ranks');
   const gap = analyzeMeld(cards('5H X 7H'));
   assert.deepEqual(labels(gap), ['5H', '6H', '7H']);
   const end = analyzeMeld(cards('JH QH KH X'));
