@@ -270,6 +270,7 @@ export class Game {
     } else {
       this.say('log.melded', { name: p.name, n: melds.length, type: melds[0].type });
     }
+    this.#clearComplete();
     this.#checkOut(p);
   }
 
@@ -290,6 +291,7 @@ export class Game {
     meld.points = result.points;
     this.#removeFromHand(p, cards);
     this.say('log.added', { name: p.name, cards: cardCodes(cards) });
+    this.#clearComplete();
     this.#checkOut(p);
   }
 
@@ -306,6 +308,21 @@ export class Game {
     this.#removeFromHand(p, [card]);
     p.hand.push(joker);
     this.say('log.swapped', { name: p.name, card: cardCodes([card]) });
+    this.#clearComplete();
+  }
+
+  // A meld nothing can be added to any more (all four suits of a rank, or a
+  // full 13-card run) and holding no joker to swap goes under the discard
+  // pile, freeing room on the table. The top discard stays the same.
+  #clearComplete() {
+    for (const m of this.melds.slice()) {
+      const full = m.type === 'set' ? m.slots.length === 4 : m.slots.length === 13;
+      if (!full || m.slots.some(s => s.card.joker)) continue;
+      this.melds.splice(this.melds.indexOf(m), 1);
+      const cards = m.slots.map(s => s.card);
+      this.discard.unshift(...cards);
+      this.say('log.cleared', { cards: cardCodes(cards) });
+    }
   }
 
   #discard(p, cardId) {

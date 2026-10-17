@@ -218,3 +218,26 @@ test('bots vote to play on', () => {
     assert.deepEqual(action, { type: 'vote', yes: true });
   }
 });
+
+test('a complete set of four goes under the discard pile, a joker keeps it on the table', () => {
+  const g = afterOpening(2);
+  const p = g.current;
+  const card = (id, suit, rank, joker = false) => ({ id, suit, rank, joker });
+  p.cameOut = true;
+  p.hand = [card('a', 'H', 8), card('b', 'S', 8), card('c', 'D', 8), card('d', 'C', 8),
+    card('e', 'H', 5), card('f', 'S', 5), card('x', null, 0, true), card('g', 'D', 5), card('h', 'H', 13), card('i', 'S', 13)];
+  assert.ok(g.apply(p.id, { type: 'draw', from: 'stock' }).ok);
+  const top = g.discard[g.discard.length - 1];
+  const before = g.discard.length;
+  assert.ok(g.apply(p.id, { type: 'meld', groups: [['a', 'b', 'c'], ['e', 'f', 'x']] }).ok);
+  assert.equal(g.melds.length, 2);
+  // Fourth 8 completes the set: it leaves the table, the top discard stays.
+  assert.ok(g.apply(p.id, { type: 'layoff', meldId: g.melds[0].id, cardIds: ['d'] }).ok);
+  assert.equal(g.melds.length, 1);
+  assert.equal(g.discard.length, before + 4);
+  assert.equal(g.discard[g.discard.length - 1], top);
+  assert.equal(g.log[g.log.length - 1].key, 'log.cleared');
+  // 5-5-joker-5 has four slots but a joker: it stays.
+  assert.ok(g.apply(p.id, { type: 'layoff', meldId: g.melds[0].id, cardIds: ['g'] }).ok);
+  assert.equal(g.melds.length, 1);
+});
