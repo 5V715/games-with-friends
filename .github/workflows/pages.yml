@@ -39,7 +39,7 @@ jobs:
       - name: Absolute link-preview image
         env:
           BASE_URL: ${{ steps.pages.outputs.base_url }}
-        run: sed -i "s|content=\"preview.jpg\"|content=\"${BASE_URL%/}/preview.jpg\"|g" public/index.html
+        run: sed -i "s|content=\"preview.jpg|content=\"${BASE_URL%/}/preview.jpg|g" public/index.html
       - uses: actions/upload-pages-artifact@v3
         with:
           path: public

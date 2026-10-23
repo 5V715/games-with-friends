@@ -59,7 +59,8 @@ function absolutePreview(req, html) {
   const host = String(req.headers['x-forwarded-host'] || req.headers.host || '').split(',')[0].trim();
   if (!/^[A-Za-z0-9.-]+(:\d+)?$/.test(host)) return html;
   const proto = String(req.headers['x-forwarded-proto'] || '').split(',')[0].trim() === 'https' || req.socket.encrypted ? 'https' : 'http';
-  return html.replace(/content="preview\.jpg"/g, `content="${proto}://${host}/preview.jpg"`);
+  // Keeps the ?v= suffix: bumping it makes messengers fetch a changed image.
+  return html.replace(/content="preview\.jpg(\?[^"]*)?"/g, (_, q = '') => `content="${proto}://${host}/preview.jpg${q}"`);
 }
 
 const PORT = Number(process.env.PORT) || 8080;

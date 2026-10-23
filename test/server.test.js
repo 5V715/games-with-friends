@@ -128,7 +128,7 @@ test('the game page gets an absolute link-preview image address', async () => {
   try {
     const res = await fetch(`${srv.base}/?room=ABCD`, { headers: { 'X-Forwarded-Host': 'play.example.com', 'X-Forwarded-Proto': 'https' } });
     const html = await res.text();
-    assert.match(html, /property="og:image" content="https:\/\/play\.example\.com\/preview\.jpg"/);
+    assert.match(html, /property="og:image" content="https:\/\/play\.example\.com\/preview\.jpg\?v=\d+"/);
     const img = await fetch(`${srv.base}/preview.jpg`);
     assert.equal(img.headers.get('content-type'), 'image/jpeg');
   } finally {
