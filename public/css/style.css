@@ -1050,6 +1050,31 @@ body.dragging-cards, body.dragging-cards * { cursor: grabbing !important; }
   z-index: 100;
 }
 .toast.show { opacity: 1; transform: translate(-50%, 0); }
+
+/* Back to the table you just left (home) and the reconnecting bar (everywhere) */
+.rejoin {
+  display: flex; align-items: center; gap: 8px; flex-wrap: wrap;
+  padding: 10px 12px; border-radius: var(--radius);
+  border: 1.5px solid var(--neon-cyan); background: rgba(56, 242, 255, .1);
+  box-shadow: 0 0 14px rgba(56, 242, 255, .35);
+}
+.rejoin[hidden] { display: none; }
+.rejoin-text { flex: 1 1 160px; font-weight: 600; min-width: 0; }
+.reconnect-bar {
+  position: fixed; z-index: 60; left: 50%; transform: translateX(-50%);
+  top: calc(8px + env(safe-area-inset-top, 0px)); width: min(92vw, 460px);
+  display: flex; align-items: center; gap: 8px; flex-wrap: wrap;
+  padding: 8px 12px; border-radius: 12px;
+  background: rgba(20, 12, 44, .96); border: 1.5px solid var(--gold); color: var(--ink);
+  box-shadow: 0 6px 20px rgba(0, 0, 0, .5); font-weight: 600; font-size: 14px;
+}
+.reconnect-bar[hidden] { display: none; }
+.reconnect-bar #reconnect-text { flex: 1 1 160px; min-width: 0; }
+.rc-dot { width: 10px; height: 10px; border-radius: 50%; background: var(--gold); animation: pulse 1.2s infinite; flex: 0 0 auto; }
+.rc-btns { display: none; gap: 8px; }
+.reconnect-bar.stuck { border-color: #ff6b7d; }
+.reconnect-bar.stuck .rc-dot { background: #ff6b7d; animation: none; }
+.reconnect-bar.stuck .rc-btns { display: flex; }
 .toast.error { background: rgba(160, 30, 30, .95); }
 
 /* ---------- Dialogs ---------- */

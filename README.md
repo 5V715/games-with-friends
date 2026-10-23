@@ -53,7 +53,9 @@ This is a private fan implementation with its own card designs.
   peer-to-peer to everyone at the table and plays right away. This needs HTTPS and
   microphone permission.
 - Bots fill seats; a disconnected player is auto-played until they rejoin. If a
-  guest reloads the page, they get their seat back.
+  guest reloads the page, they get their seat back. After the phone's screen was
+  off, a guest checks the link and reconnects by itself; for 15 minutes the start
+  page also offers "Back to the table" (even in a new tab).
 - Optional custom TURN server and "relay only" mode in the in-app settings.
 
 ## Architecture

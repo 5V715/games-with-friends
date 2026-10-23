@@ -69,7 +69,9 @@ export class HostSession extends EventTarget {
     if (msg.t === 'join') return this.#onJoin(peerId, msg);
     const pid = this.peerToPlayer.get(peerId);
     if (!pid) return;
-    if (msg.t === 'input') {
+    if (msg.t === 'ping') {
+      this.net.send(peerId, { t: 'pong', id: String(msg.id).slice(0, 16) });
+    } else if (msg.t === 'input') {
       // Real-time input; may arrive out of order over the fast channel.
       const seq = Number(msg.seq) || 0;
       if (seq <= (this.inputSeq.get(pid) || 0)) return;
@@ -348,6 +350,8 @@ export class GuestSession extends EventTarget {
         this.lastFrame = msg.f.n;
         emit(this, 'frame', msg.f);
       }
+    } else if (msg.t === 'pong') {
+      this.pongs?.get(msg.id)?.();
     } else if (msg.t === 'state') {
       if (msg.view?.gameNo !== this.view?.gameNo || msg.view?.game !== this.view?.game) this.lastFrame = 0;
       this.view = msg.view;
@@ -366,6 +370,20 @@ export class GuestSession extends EventTarget {
 
   get canTalk() {
     return this.net.link?.state === 'open';
+  }
+
+  // Resolves true if the host answers within `ms` (used after the phone wakes
+  // up: a connection can look open although it died while the screen was off).
+  ping(ms = 3000) {
+    if (this.net.link?.state !== 'open') return Promise.resolve(false);
+    this.pongs ||= new Map();
+    const id = Math.random().toString(36).slice(2, 10);
+    return new Promise(resolve => {
+      const done = (ok) => { this.pongs.delete(id); clearTimeout(timer); resolve(ok); };
+      const timer = setTimeout(() => done(false), ms);
+      this.pongs.set(id, () => done(true));
+      this.net.send({ t: 'ping', id });
+    });
   }
 
   async sendVoice(blob) {

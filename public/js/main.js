@@ -35,7 +35,37 @@ function store(kind, key, value) {
 }
 
 // One id per browser tab so a reload reclaims the same seat.
-const clientId = store('session', 'romme.cid') || store('session', 'romme.cid', 'p' + randomId(12));
+let clientId = store('session', 'romme.cid') || store('session', 'romme.cid', 'p' + randomId(12));
+
+// The table a guest last sat at, kept for 15 minutes after the last contact
+// so a closed tab or a restarted browser can take the same seat again.
+const LAST_TABLE_KEY = 'romme.lastTable';
+const LAST_TABLE_MS = 15 * 60 * 1000;
+let rememberedAt = 0;
+
+function rememberTable() {
+  if (ui.mode !== 'online' || !ui.room || !ui.session || ui.session.isHost) return;
+  rememberedAt = Date.now();
+  store('local', LAST_TABLE_KEY, JSON.stringify({ room: ui.room, cid: clientId, at: rememberedAt }));
+}
+
+function lastTable() {
+  try {
+    const v = JSON.parse(store('local', LAST_TABLE_KEY) || 'null');
+    return v && Date.now() - v.at < LAST_TABLE_MS && /^[A-Z0-9]{4,8}$/.test(v.room) && typeof v.cid === 'string' ? v : null;
+  } catch { return null; }
+}
+
+function forgetTable() {
+  store('local', LAST_TABLE_KEY, '');
+  $('#rejoin').hidden = true;
+}
+
+// Sit down on the remembered seat (same player id as before).
+function adoptSeat(table) {
+  clientId = table.cid;
+  store('session', 'romme.cid', clientId);
+}
 
 // ---------------------------------------------------------------- state
 
@@ -66,7 +96,17 @@ const ui = {
 
 function show(screen) {
   for (const s of $$('.screen')) s.classList.toggle('active', s.id === `screen-${screen}`);
-  if (screen === 'home') startDonate($('#donate-track'));
+  if (screen === 'home') {
+    startDonate($('#donate-track'));
+    renderRejoin();
+  }
+}
+
+// Home: offer to go back to the table you were at a few minutes ago.
+function renderRejoin() {
+  const table = lastTable();
+  $('#rejoin').hidden = !table;
+  if (table) $('#rejoin-text').textContent = t('rejoin.text', { room: table.room });
 }
 
 let toastTimer;
@@ -200,6 +240,7 @@ function attach(session) {
     if (session !== ui.session) return;
     if (drag.active) ui.pendingView = ev.detail.view;
     else applyView(ev.detail.view);
+    if (Date.now() - rememberedAt > 30000) rememberTable();
   });
   session.addEventListener('error', (ev) => {
     if (session !== ui.session) return;
@@ -209,7 +250,11 @@ function attach(session) {
   session.addEventListener('link', (ev) => {
     if (session !== ui.session) return;
     ui.link = ev.detail;
-    if (ev.detail.state === 'open') ui.reconnects = 0;
+    if (ev.detail.state === 'open') {
+      ui.reconnects = 0;
+      setReconnectBar(null);
+      rememberTable();
+    }
     renderLink();
   });
   session.addEventListener('frame', (ev) => {
@@ -1352,7 +1397,7 @@ const JOIN_ERRORS = {
   'signaling-unavailable': 'toast.sigUnreachable',
 };
 
-async function joinOnline(room, { quiet = false } = {}) {
+async function joinOnline(room, { quiet = false, keepScreen = false } = {}) {
   room = String(room || '').trim().toUpperCase();
   if (!/^[A-Z0-9]{4,8}$/.test(room)) return toast(t('toast.enterCode'), { error: true });
   $('#btn-join').classList.remove('hint');
@@ -1363,8 +1408,10 @@ async function joinOnline(room, { quiet = false } = {}) {
   const net = new GuestNet({ config });
   const s = new GuestSession({ name: playerName(), clientId, net });
   attach(s);
-  show('lobby');
-  renderLobbyConnecting(room);
+  if (!keepScreen) {
+    show('lobby');
+    renderLobbyConnecting(room);
+  }
   try {
     await net.join(room);
     history.replaceState(null, '', roomUrl(room));
@@ -1386,22 +1433,85 @@ function renderLobbyConnecting(room) {
   renderLink();
 }
 
+const sleep = (ms) => new Promise(r => setTimeout(r, ms));
+
+// Resolves once the page is visible and the device is online again (a phone
+// with the screen off can't reconnect anyway).
+function whenAwake() {
+  if (!document.hidden && navigator.onLine !== false) return Promise.resolve();
+  return new Promise(resolve => {
+    const check = () => {
+      if (document.hidden || navigator.onLine === false) return;
+      document.removeEventListener('visibilitychange', check);
+      window.removeEventListener('online', check);
+      resolve();
+    };
+    document.addEventListener('visibilitychange', check);
+    window.addEventListener('online', check);
+  });
+}
+
+async function linkOpens(session, ms) {
+  for (let waited = 0; waited < ms; waited += 250) {
+    if (ui.session !== session) return false;
+    if (ui.link?.state === 'open') return true;
+    await sleep(250);
+  }
+  return false;
+}
+
+const RECONNECT_TRIES = 8;
+
+// Guest lost the host: keep trying (only while the screen is on) to sit
+// down at the same table again. After a few failures show retry / leave.
 async function onGuestLost() {
-  if (ui.mode === 'online' && ui.room && ui.reconnects < 5) {
-    ui.reconnects++;
-    toast(t('toast.reconnecting'), { error: true });
-    await new Promise(r => setTimeout(r, 1500 * ui.reconnects));
-    if (!ui.session || ui.session.isHost) return;
-    const room = ui.room;
-    try {
-      await joinOnline(room, { quiet: true });
-    } catch {
-      onGuestLost();
-    }
+  if (ui.mode !== 'online' || !ui.room) {
+    toast(t('toast.disconnected'), { error: true });
+    leave();
     return;
   }
-  toast(t('toast.disconnected'), { error: true });
-  leave();
+  if (ui.rejoining) return;
+  ui.rejoining = true;
+  const room = ui.room;
+  // Stay on the game screen while reconnecting; it updates once we're back.
+  const keepScreen = !!ui.view && ui.view.phase !== 'lobby';
+  setReconnectBar('trying');
+  let tries = 0;
+  while (ui.room === room && ui.mode === 'online') {
+    await whenAwake();
+    if (ui.room !== room) break;
+    if (tries >= RECONNECT_TRIES) {
+      setReconnectBar('stuck');
+      break;
+    }
+    await sleep(tries ? Math.min(1500 * tries, 8000) : 200);
+    tries++;
+    try {
+      await joinOnline(room, { quiet: true, keepScreen });
+      if (await linkOpens(ui.session, 15000)) break;
+    } catch { /* try again */ }
+  }
+  ui.rejoining = false;
+}
+
+function setReconnectBar(mode) {
+  const bar = $('#reconnect-bar');
+  bar.hidden = !mode;
+  if (!mode) return;
+  bar.classList.toggle('stuck', mode === 'stuck');
+  $('#reconnect-text').textContent = mode === 'stuck' ? t('reconnect.stuck', { room: ui.room || '' }) : t('toast.reconnecting');
+}
+
+// After the screen was off: a link can look open although it is dead.
+let hiddenAt = 0;
+async function checkLinkAfterWake() {
+  const s = ui.session;
+  if (!s || s.isHost || ui.mode !== 'online' || !ui.room || ui.rejoining) return;
+  if (await s.ping()) return;
+  if (ui.session === s && !ui.rejoining) {
+    s.close();
+    onGuestLost();
+  }
 }
 
 function leave() {
@@ -1410,7 +1520,10 @@ function leave() {
   ui.view = null;
   ui.room = null;
   ui.reconnects = 0;
+  ui.mode = null;
   store('session', 'romme.activeRoom', '');
+  forgetTable();
+  setReconnectBar(null);
   s?.close();
   for (const d of $$('dialog')) if (d.open) d.close();
   const keep = new URLSearchParams(location.search).get('signal');
@@ -1592,6 +1705,7 @@ function translatePage() {
   renderLangSwitches();
   applyI18n();
   startDonate($('#donate-track'));
+  renderRejoin();
   drawTitleArt();
   renderHomeGamePick();
   for (const o of $('#bot-count').options) o.textContent = t('home.bots', { n: Number(o.value) });
@@ -1617,9 +1731,31 @@ function bind() {
     // Invited by link: join right away; without a saved name, ask for it first.
     // (If the player cancels, the Join button glows to show where to tap.)
     $('#btn-join').classList.add('hint');
-    if (store('session', 'romme.activeRoom') === room.toUpperCase() || $('#name').value.trim()) setTimeout(() => joinOnline(room), 0);
+    // Back within 15 minutes (even from a new tab): take the old seat again.
+    const table = lastTable();
+    if (table?.room === room.toUpperCase()) adoptSeat(table);
+    if (table?.room === room.toUpperCase() || store('session', 'romme.activeRoom') === room.toUpperCase() || $('#name').value.trim()) setTimeout(() => joinOnline(room), 0);
     else askNameAndJoin(room.toUpperCase());
   }
+  $('#btn-rejoin').onclick = () => {
+    const table = lastTable();
+    if (!table) return renderRejoin();
+    adoptSeat(table);
+    joinOnline(table.room);
+  };
+  $('#btn-rejoin-x').onclick = forgetTable;
+  $('#btn-reconnect-retry').onclick = () => onGuestLost();
+  $('#btn-reconnect-leave').onclick = () => leave();
+  document.addEventListener('visibilitychange', () => {
+    if (document.hidden) {
+      hiddenAt = Date.now();
+      rememberTable();
+    } else if (Date.now() - hiddenAt > 3000) {
+      checkLinkAfterWake();
+    }
+  });
+  window.addEventListener('online', () => checkLinkAfterWake());
+  window.addEventListener('pageshow', (e) => { if (e.persisted) checkLinkAfterWake(); });
 
   $('#btn-host').onclick = hostOnline;
   $('#btn-join').onclick = () => joinOnline($('#room-input').value);

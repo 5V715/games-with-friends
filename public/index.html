@@ -44,6 +44,12 @@
         <h1 class="logo">SILAS <small>ARCADE</small></h1>
         <p class="tagline" data-i18n="home.tagline">Rommé, 1!, Hegemony Deal, Knobel-Kiez, Bomber Buben and Stacked with your friends — browser to browser, no account needed.</p>
 
+        <div class="rejoin" id="rejoin" hidden>
+          <span class="rejoin-text" id="rejoin-text"></span>
+          <button class="btn small primary" id="btn-rejoin" data-i18n="rejoin.back">Back to the table</button>
+          <button class="btn icon small" id="btn-rejoin-x" aria-label="Dismiss" data-i18n-aria="rejoin.dismiss">✕</button>
+        </div>
+
         <label class="field">
           <span data-i18n="home.name">Your name</span>
           <input id="name" type="text" maxlength="20" autocomplete="nickname" placeholder="Name" data-i18n-ph="home.namePh">
@@ -188,6 +194,13 @@
     </section>
 
     <div class="toast" id="toast" role="status" aria-live="polite"></div>
+    <div class="reconnect-bar" id="reconnect-bar" role="status" aria-live="polite" hidden>
+      <span class="rc-dot"></span><span id="reconnect-text"></span>
+      <span class="rc-btns">
+        <button class="btn small primary" id="btn-reconnect-retry" data-i18n="reconnect.retry">Try again</button>
+        <button class="btn small" id="btn-reconnect-leave" data-i18n="reconnect.leave">Leave</button>
+      </span>
+    </div>
     <div class="ptt-indicator" id="ptt-indicator" aria-live="polite" hidden>
       <span class="rec-dot"></span><span id="ptt-time">0s</span>
     </div>
