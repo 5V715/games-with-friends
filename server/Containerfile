@@ -6,7 +6,7 @@
 FROM docker.io/library/node:22-alpine
 
 LABEL org.opencontainers.image.title="games-with-friends" \
-      org.opencontainers.image.description="Silas Arcade (Rommé, 1!, Hegemony Deal, Bomber Buben, Stacked): WebRTC signaling relay and the game page" \
+      org.opencontainers.image.description="Silas Arcade (Rommé, 1!, Hegemony Deal, Knobel-Kiez, Bomber Buben, Stacked): WebRTC signaling relay and the game page" \
       org.opencontainers.image.source="https://github.com/5V715/games-with-friends" \
       org.opencontainers.image.licenses="MIT"
 
