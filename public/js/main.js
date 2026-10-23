@@ -1560,11 +1560,19 @@ function drawTitleArt() {
     '.........y..', '........yoy.', '.......o.y..', '......k.....', '....kkkk....', '..kkkkkkkk..',
     '.kkwwkkkkkk.', '.kwwkkkkkkk.', '.kwkkkkkkkk.', '.kkkkkkkkgk.', '.kkkkkkkgkk.', '..kkkkkkkk..', '....kkkk....',
   ];
+  // A die showing five (Knobel-Kiez), with a shaded lower edge.
+  const DIE_PAL = { k: '#16131c', w: '#fffdf7', s: '#cfc6b4', p: '#e5322d' };
+  const DIE = [
+    '.kkkkkkkkkk.', 'kwwwwwwwwwwk', 'kwppwwwwppwk', 'kwppwwwwppwk', 'kwwwwwwwwwwk', 'kwwwwppwwwwk',
+    'kwwwwppwwwwk', 'kwwwwwwwwwwk', 'kwppwwwwppwk', 'kwppwwwwppwk', 'kssssssssssk', '.kkkkkkkkkk.',
+  ];
   for (const cv of $$('.tc-pixel')) {
     const g = cv.getContext('2d');
     g.clearRect(0, 0, cv.width, cv.height);
     if (cv.dataset.art === 'bomb') {
       BOMB.forEach((row, y) => [...row].forEach((c, x) => { if (PAL[c]) { g.fillStyle = PAL[c]; g.fillRect(x + 1, y + 1, 1, 1); } }));
+    } else if (cv.dataset.art === 'die') {
+      DIE.forEach((row, y) => [...row].forEach((c, x) => { if (DIE_PAL[c]) { g.fillStyle = DIE_PAL[c]; g.fillRect(x, y, 1, 1); } }));
     } else {
       // Bricks in two colours with mortar lines, offset every other row.
       for (let y = 0; y < 12; y++) {
