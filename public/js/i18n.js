@@ -87,7 +87,7 @@ const STRINGS = {
 
     // ---- home
     'game.romme': 'Rommé',
-    'home.tagline': 'Rommé, 1!, Hegemony Deal, Bomber Buben and Stacked with your friends — browser to browser, no account needed.',
+    'home.tagline': 'Rommé, 1!, Hegemony Deal, Knobel-Kiez, Bomber Buben and Stacked with your friends — browser to browser, no account needed.',
     'home.source': 'Source code on GitHub',
     'donate.text': '🍺 Feed my Claude – a tip keeps the tokens flowing. Entirely optional.',
     'home.pickGame': 'Choose a game',
@@ -359,7 +359,7 @@ const STRINGS = {
     'log.gameOver': 'Spiel vorbei — {names} gewinnt mit {points} Punkten',
 
     'game.romme': 'Rommé',
-    'home.tagline': 'Rommé, 1!, Hegemony Deal, Bomber Buben und Stacked mit Freunden — direkt von Browser zu Browser, ohne Konto.',
+    'home.tagline': 'Rommé, 1!, Hegemony Deal, Knobel-Kiez, Bomber Buben und Stacked mit Freunden — direkt von Browser zu Browser, ohne Konto.',
     'home.source': 'Quellcode auf GitHub',
     'donate.text': '🍺 Feed my Claude – ein Tipp hält die Tokens am Laufen. Ganz freiwillig.',
     'home.pickGame': 'Wähle ein Spiel',

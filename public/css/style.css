@@ -750,7 +750,7 @@ body.dragging-cards, body.dragging-cards * { cursor: grabbing !important; }
 
 /* ---------- Game choice ---------- */
 
-.game-pick { display: flex; gap: 8px; }
+.game-pick { display: grid; grid-template-columns: repeat(auto-fit, minmax(96px, 1fr)); gap: 8px; }
 .game-pick:empty { display: none; }
 .game-opt {
   flex: 1;
@@ -780,6 +780,57 @@ body.dragging-cards, body.dragging-cards * { cursor: grabbing !important; }
 .center { text-align: center; }
 .dir-arrow { align-self: center; font-size: 26px; padding: 0 4px; color: var(--gold); }
 .sheet-btn { flex: 0 0 44px; align-self: center; }
+
+/* ---------- Knobel-Kiez ---------- */
+
+.kz-sheet { width: 100%; border-collapse: separate; border-spacing: 0; font-size: 13px; font-variant-numeric: tabular-nums; table-layout: fixed; }
+.kz-sheet th, .kz-sheet td { padding: 2px 4px; height: 25px; text-align: center; border-bottom: 1px solid rgba(255, 255, 255, .07); }
+.kz-sheet thead th { font-size: 12px; font-weight: 700; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--ink-dim); }
+.kz-sheet thead th:first-child { width: 38%; }
+.kz-sheet thead th.turn { color: var(--gold); text-shadow: 0 0 6px rgba(255, 225, 77, .6); }
+.kz-sheet tbody th { text-align: left; font-weight: 600; color: var(--ink-dim); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.kz-sheet .mine { background: rgba(56, 242, 255, .07); }
+.kz-sheet td.zero { color: var(--ink-dim); }
+.kz-sheet td.open { padding: 2px; }
+.kz-sheet td.open button {
+  width: 100%; height: 21px; border-radius: 6px; cursor: pointer;
+  border: 1px dashed rgba(255, 225, 77, .55); background: rgba(255, 225, 77, .08);
+  color: var(--gold); font: 700 13px/1 var(--font-ui);
+}
+.kz-sheet td.open.nil button { color: var(--ink-dim); border-color: rgba(255, 255, 255, .2); background: none; }
+.kz-sheet td.open.picked button { background: var(--gold); color: var(--accent-ink); border-style: solid; box-shadow: 0 0 10px var(--gold); }
+.kz-sheet .kz-sum th, .kz-sheet .kz-sum td { color: var(--ink); font-weight: 700; border-bottom-color: rgba(56, 242, 255, .3); }
+.kz-sheet .kz-sum td small { margin-left: 3px; font-size: 10px; font-weight: 400; color: var(--ink-dim); }
+.kz-sheet .kz-sum td.got { color: var(--ok); }
+.kz-sheet .kz-sum.total td { color: var(--gold); font-size: 15px; }
+.opp .kz-mini { background: none; border: 0; font-size: 18px; }
+
+.play-hand.kz-dice { min-height: 0; gap: clamp(6px, 2.5vw, 14px); align-items: center; padding: 10px 0 18px; }
+.kz-die {
+  --d: clamp(48px, 14vw, 66px);
+  position: relative; width: var(--d); height: var(--d); padding: calc(var(--d) * .12);
+  border-radius: 18%; border: 1px solid var(--card-edge); background: var(--card);
+  box-shadow: 0 4px 0 #c9c1ae, 0 7px 14px rgba(0, 0, 0, .45);
+  cursor: pointer; transition: transform .15s, box-shadow .15s, opacity .2s;
+}
+.kz-face { display: grid; grid-template: repeat(3, 1fr) / repeat(3, 1fr); width: 100%; height: 100%; }
+.kz-face i { margin: 14%; border-radius: 50%; }
+.kz-face i.on { background: #17121f; }
+.kz-die small {
+  position: absolute; left: 50%; bottom: -15px; transform: translateX(-50%);
+  font: 7px/1 var(--font-pixel); color: var(--gold); opacity: 0; transition: opacity .15s;
+}
+.kz-die.held { transform: translateY(-8px); box-shadow: 0 0 0 3px var(--gold), 0 0 16px rgba(255, 225, 77, .7), 0 7px 14px rgba(0, 0, 0, .45); }
+.kz-die.held small { opacity: 1; }
+.kz-die.idle { opacity: .45; }
+.kz-die.rolling { animation: kz-tumble .52s ease-out; }
+.kz-die:focus-visible { outline: 2px solid var(--neon-cyan); outline-offset: 3px; }
+@keyframes kz-tumble {
+  0% { transform: rotate(-28deg) scale(.82); }
+  35% { transform: rotate(20deg) translateY(-12px); }
+  65% { transform: rotate(-8deg) translateY(-2px); }
+  100% { transform: none; }
+}
 
 /* ---------- UNO ---------- */
 

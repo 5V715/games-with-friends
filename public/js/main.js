@@ -7,13 +7,14 @@ import { PushToTalk, VoicePlayer, voiceSupported, VOICE_MAX_MS } from './voice.j
 import { t, msg, applyI18n, setLang, savedLang, LANGS, rankName, lang as currentLang } from './i18n.js';
 import { GAMES, GAME_IDS, gameInfo, DEFAULT_GAME } from './games/index.js';
 import { createUnoUI } from './games/uno/ui.js';
+import { createKiezUI } from './games/kiez/ui.js';
 import { createDealUI } from './games/deal/ui.js';
 import { createBomberUI } from './games/bomber/ui.js';
 import { createStackedUI } from './games/stacked/ui.js';
 import { closeChoice } from './ui-kit.js';
 import { startDonate } from './donate.js';
 
-const PLAY_UIS = { uno: createUnoUI, deal: createDealUI, bomber: createBomberUI, stacked: createStackedUI };
+const PLAY_UIS = { uno: createUnoUI, kiez: createKiezUI, deal: createDealUI, bomber: createBomberUI, stacked: createStackedUI };
 import {
   HostNet, GuestNet, getNetConfig, randomId, randomRoomCode, loadTurnSettings, saveTurnSettings,
   signalingUrl, savedSignalingUrl, saveSignalingUrl, defaultSignalingUrl,
@@ -822,15 +823,17 @@ function renderSheet(table) {
   const head = players.map(p => `<th class="num">${esc(p.id === v.you ? t('game.you') : p.name)}</th>`).join('');
   let html = `<tr><th>${t('sheet.round')}</th>${head}</tr>`;
   const uno = v.game === 'uno'; // UNO: the winner scores, highest total wins
+  const kiez = v.game === 'kiez'; // Knobel-Kiez: everyone scores, highest total wins
   for (const h of v.history) {
     const cells = players.map(p => {
       const won = p.id === h.winner;
-      const pts = uno ? (won ? `🏆 +${h.gained[p.id]}` : '–') : (won ? '🏆 0' : h.penalties[p.id] ?? 0);
+      const pts = kiez ? `${won ? '🏆 ' : ''}${h.gained[p.id]}`
+        : uno ? (won ? `🏆 +${h.gained[p.id]}` : '–') : (won ? '🏆 0' : h.penalties[p.id] ?? 0);
       return `<td class="num${won ? ' won' : ''}">${pts}</td>`;
     }).join('');
     html += `<tr><td>${h.round}${h.handRomme ? ` <span class="chip warn">${t('sheet.hand')}</span>` : ''}</td>${cells}</tr>`;
   }
-  const best = (uno ? Math.max : Math.min)(...players.map(p => p.score));
+  const best = (uno || kiez ? Math.max : Math.min)(...players.map(p => p.score));
   const totals = players.map(p => `<td class="num${p.score === best ? ' best' : ''}">${p.score}</td>`).join('');
   html += `<tr class="total"><td>${t('sheet.total')}</td>${totals}</tr>`;
   table.innerHTML = html;
