@@ -5,6 +5,7 @@ const plural = (n, one, many) => (n === 1 ? one : many);
 addStrings({
   en: {
     'game.deal': 'Hegemony Deal',
+    'game.short.deal': 'Deal',
     'deal.color.brown': 'Brown',
     'deal.color.lblue': 'Light blue',
     'deal.color.pink': 'Pink',
@@ -189,6 +190,7 @@ addStrings({
   },
   de: {
     'game.deal': 'Hegemony Deal',
+    'game.short.deal': 'Deal',
     'deal.color.brown': 'Braun',
     'deal.color.lblue': 'Hellblau',
     'deal.color.pink': 'Pink',

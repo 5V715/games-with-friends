@@ -4,7 +4,7 @@ import { SUIT_SYMBOL, RED_SUITS } from './cards.js';
 import { analyzeMeld, layOff, swapJoker } from './rules.js';
 import { HostSession, GuestSession } from './session.js';
 import { PushToTalk, VoicePlayer, voiceSupported, VOICE_MAX_MS } from './voice.js';
-import { t, msg, applyI18n, setLang, savedLang, LANGS, rankName, lang as currentLang } from './i18n.js';
+import { t, msg, hasKey, applyI18n, setLang, savedLang, LANGS, rankName, lang as currentLang } from './i18n.js';
 import { GAMES, GAME_IDS, gameInfo, DEFAULT_GAME } from './games/index.js';
 import { createUnoUI } from './games/uno/ui.js';
 import { createKiezUI } from './games/kiez/ui.js';
@@ -422,7 +422,12 @@ function renderGamePick(box, selected, onPick) {
     b.className = 'game-opt' + (id === selected ? ' on' : '');
     b.setAttribute('role', 'radio');
     b.setAttribute('aria-checked', id === selected);
-    b.innerHTML = `<span class="game-icon">${GAMES[id].icon}</span><span>${esc(t('game.' + id))}</span>`;
+    // Six games fit in one row with short names; the full name stays as label.
+    const full = t('game.' + id);
+    const short = hasKey('game.short.' + id) ? t('game.short.' + id) : full;
+    b.title = full;
+    b.setAttribute('aria-label', full);
+    b.innerHTML = `<span class="game-icon">${GAMES[id].icon}</span><span class="game-name">${esc(short)}</span>`;
     b.onclick = () => onPick(id);
     box.append(b);
   }

@@ -3,6 +3,7 @@ import { addStrings } from '../../i18n.js';
 addStrings({
   en: {
     'game.kiez': 'Knobel-Kiez',
+    'game.short.kiez': 'Knobel',
     'kiez.cat.ones': 'Ones',
     'kiez.cat.twos': 'Twos',
     'kiez.cat.threes': 'Threes',
@@ -55,6 +56,7 @@ addStrings({
   },
   de: {
     'game.kiez': 'Knobel-Kiez',
+    'game.short.kiez': 'Knobel',
     'kiez.cat.ones': 'Einser',
     'kiez.cat.twos': 'Zweier',
     'kiez.cat.threes': 'Dreier',

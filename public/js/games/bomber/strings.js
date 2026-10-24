@@ -3,6 +3,7 @@ import { addStrings } from '../../i18n.js';
 addStrings({
   en: {
     'game.bomber': 'Bomber Buben',
+    'game.short.bomber': 'Bomber',
     'bomber.rotate': 'Turn your phone sideways to play',
     'bomber.ready': 'Ready?',
     'bomber.go': 'GO!',
@@ -43,6 +44,7 @@ addStrings({
   },
   de: {
     'game.bomber': 'Bomber Buben',
+    'game.short.bomber': 'Bomber',
     'bomber.rotate': 'Halte dein Handy quer, um zu spielen',
     'bomber.ready': 'Bereit?',
     'bomber.go': 'LOS!',
