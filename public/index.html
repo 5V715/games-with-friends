@@ -211,24 +211,16 @@
     <h2 id="round-title" data-i18n="round.title">Round over</h2>
     <p class="round-sub" id="round-sub" hidden></p>
     <div class="sheet-wrap"><table class="scores" id="round-scores"></table></div>
-    <div id="vote-box">
-      <h3 class="vote-question" data-i18n="vote.question">Play another round?</h3>
-      <ul class="vote-list" id="vote-list"></ul>
-      <div class="dlg-actions">
-        <button class="btn" id="btn-vote-no" data-i18n="vote.no">No, stop</button>
-        <button class="btn primary" id="btn-vote-yes" data-i18n="vote.yes">Yes, play again</button>
-      </div>
-      <p class="hint" data-i18n="vote.rule">The majority decides; a tie means another round.</p>
-    </div>
-    <div id="over-box" hidden>
-      <div class="dlg-actions">
-        <button class="btn" id="btn-over-leave" data-i18n="over.leave">Leave</button>
-        <button class="btn primary host-only" id="btn-new-game" data-i18n="over.newGame">New game</button>
-      </div>
-      <p class="hint guest-only" data-i18n="over.waitHost">The host can start a new game.</p>
+    <!-- What next: everyone taps a game; the current one means "another round" -->
+    <div id="next-box">
+      <h3 class="vote-question" data-i18n="next.question">What do we play next?</h3>
+      <div class="next-tiles" id="next-tiles" role="radiogroup" aria-label="Next game"></div>
+      <p class="next-status" id="next-status"></p>
+      <div class="next-timer" id="next-timer" hidden><i></i></div>
     </div>
     <div class="dlg-actions">
       <button class="btn ghost" data-close data-i18n="round.showTable">Show table</button>
+      <button class="btn ghost" id="btn-next-leave" data-i18n="next.leave">Leave table</button>
     </div>
   </dialog>
 

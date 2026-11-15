@@ -721,15 +721,38 @@ body.dragging-cards, body.dragging-cards * { cursor: grabbing !important; }
 /* ---------- Round result, voting, score sheet ---------- */
 
 .round-sub { margin: -4px 0 10px; font-weight: 700; color: var(--gold); }
-.round-sub[hidden], #vote-box[hidden], #over-box[hidden], #btn-round-open[hidden] { display: none; }
+.round-sub[hidden], #next-box[hidden], #btn-round-open[hidden] { display: none; }
+#next-box { display: grid; gap: 8px; }
+.next-tiles { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 6px; }
+.next-tile {
+  position: relative; display: grid; justify-items: center; align-content: center; gap: 3px;
+  min-height: 78px; padding: 10px 4px 6px; border-radius: var(--radius);
+  border: 2px solid rgba(56, 242, 255, .35); background: rgba(11, 6, 32, .55);
+  color: #c9f9ff; font: 600 12px/1.1 var(--font-ui); cursor: pointer;
+}
+.next-tile:disabled { opacity: .35; cursor: default; }
+.next-tile.cur { border-color: var(--gold); }
+.next-tile.mine { border-color: var(--neon-cyan); background: rgba(56, 242, 255, .14); box-shadow: 0 0 12px var(--neon-cyan); color: #fff; }
+.next-tile.picked { border-color: var(--gold); box-shadow: 0 0 12px rgba(255, 225, 77, .6); opacity: 1; }
+.next-tile:focus-visible { outline: 2px solid var(--gold); outline-offset: 2px; }
+.next-again {
+  position: absolute; top: -7px; left: 50%; transform: translateX(-50%);
+  font: 7px/1 var(--font-pixel); padding: 3px 4px; border-radius: 3px;
+  background: var(--gold); color: var(--accent-ink); white-space: nowrap;
+}
+.next-dots { display: flex; gap: 3px; min-height: 10px; }
+.next-dots i { width: 10px; height: 10px; border-radius: 50%; box-shadow: 0 0 4px rgba(0, 0, 0, .6); }
+.next-status { margin: 0; min-height: 1.3em; color: var(--ink-dim); font-size: 13px; text-align: center; }
+.next-status.host { color: var(--gold); font-weight: 600; }
+.next-timer { height: 4px; border-radius: 2px; background: rgba(255, 255, 255, .1); overflow: hidden; }
+.next-timer[hidden] { display: none; }
+.next-timer i { display: block; height: 100%; background: var(--gold); transition: width .25s linear; }
 .sheet-wrap { overflow-x: auto; margin: 0 -4px; }
 .sheet-table th, .sheet-table td { white-space: nowrap; }
 .sheet-table td.won { color: var(--gold); }
 .sheet-table tr.total td { font-weight: 800; border-top: 2px solid rgba(255, 255, 255, .35); }
 .sheet-table td.best { color: var(--ok); }
 .vote-question { margin: 16px 0 6px; font-size: 17px; }
-.vote-list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 4px; }
-.vote-list li { display: flex; justify-content: space-between; align-items: center; padding: 6px 2px; border-bottom: 1px solid rgba(255, 255, 255, .08); }
 .btn.chosen { outline: 3px solid #fff; outline-offset: 2px; }
 .sheet-btn { flex: 0 0 44px; align-self: center; }
 #btn-round-open { flex: 0 0 auto; }

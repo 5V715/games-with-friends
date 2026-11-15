@@ -10,7 +10,7 @@
 
 import { GameError } from './engine.js';
 import { tr } from './i18n.js';
-import { gameInfo } from './games/index.js';
+import { gameInfo, GAMES, GAME_IDS } from './games/index.js';
 import { VoiceAssembler, clipToMessages, validVoiceMessage } from './voice.js';
 
 const TICK_MS = 1000 / 60;
@@ -18,6 +18,7 @@ const FRAME_EVERY = 3; // real-time games: send a frame every 3rd tick (20 per s
 const BOT_NAMES = ['Ada', 'Bruno', 'Clara', 'Dieter', 'Erika', 'Fritz', 'Greta', 'Hans'];
 const BOT_DELAY = 750;
 const AWAY_DELAY = 8000; // a disconnected human is auto-played after this
+const DECIDE_MS = 15000; // a split vote: the host decides, else the majority wins
 
 function emit(target, type, detail) {
   target.dispatchEvent(new CustomEvent(type, { detail }));
@@ -49,6 +50,8 @@ export class HostSession extends EventTarget {
     this.voice = new VoiceAssembler();
     this.inputSeq = new Map();
     this.loop = null;
+    // After a round or game: what to play next ({ votes: { playerId: gameId }, decideAt }).
+    this.next = null;
 
     if (net) {
       net.addEventListener('message', (ev) => this.#onMessage(ev.detail.peerId, ev.detail.msg));
@@ -166,12 +169,13 @@ export class HostSession extends EventTarget {
       case 'setGame': {
         // Switch the game in the lobby; everyone keeps their seat.
         if (g.phase !== 'lobby') throw new GameError('err.gameStarted');
-        const info = gameInfo(action.game);
-        if (g.players.length > info.max) throw new GameError('err.tableFull');
-        const next = info.create();
-        for (const p of g.players) next.addPlayer(p.id, p.name, { bot: p.bot });
-        this.info = info;
-        this.game = next;
+        this.#switchGame(action.game);
+        return;
+      }
+      case 'nextDecide': {
+        if (!this.next?.decideAt) throw new GameError('err.noVote');
+        if (!this.#canPlay(action.game)) throw new GameError('err.tableFull');
+        this.#playNext(action.game);
         return;
       }
       case 'removePlayer': {
@@ -193,11 +197,13 @@ export class HostSession extends EventTarget {
     this.lastAuto = null; // a real move: the next auto-play waits the grace period again
     if (!action || typeof action !== 'object') return { ok: false, error: 'Bad action', key: 'err.badAction' };
     let res;
-    const hostOnly = ['start', 'addBot', 'removePlayer', 'newGame', 'setGame'].includes(action.type);
+    const hostOnly = ['start', 'addBot', 'removePlayer', 'newGame', 'setGame', 'nextDecide'].includes(action.type);
     if (hostOnly && pid !== this.myId) {
       res = { ok: false, error: 'Only the host can do that', key: 'err.hostOnly' };
     } else if (hostOnly) {
       try { this.#hostAction(action); res = { ok: true }; } catch (e) { res = { ok: false, error: e.message, key: e.key, params: e.params }; }
+    } else if (action.type === 'next') {
+      res = this.#voteNext(pid, action.game);
     } else {
       res = this.game.apply(pid, action);
     }
@@ -221,11 +227,110 @@ export class HostSession extends EventTarget {
     const view = this.game.view(pid);
     view.host = this.myId;
     view.room = this.room;
+    view.next = this.#nextView();
     for (const p of view.players) p.conn = this.#connInfo(p);
     return view;
   }
 
+  // ---- what to play next: everyone votes, a split goes to the host ----
+
+  #switchGame(id) {
+    const info = gameInfo(id);
+    if (this.game.players.length > info.max) throw new GameError('err.tableFull');
+    const next = info.create();
+    for (const p of this.game.players) next.addPlayer(p.id, p.name, { bot: p.bot });
+    this.info = info;
+    this.game = next;
+  }
+
+  #canPlay(id) {
+    const info = GAMES[id];
+    const n = this.game.players.length;
+    return !!info && n >= info.min && n <= info.max;
+  }
+
+  // People who vote: the host and connected guests (bots and absent players don't).
+  #voters() {
+    return this.game.players.filter(p => !p.bot && (p.id === this.myId || this.playerToPeer.has(p.id))).map(p => p.id);
+  }
+
+  #syncNext() {
+    const open = this.game.phase === 'roundOver' || this.game.phase === 'gameOver';
+    if (!open) {
+      if (this.next) { clearTimeout(this.next.timer); this.next = null; }
+      return;
+    }
+    this.next ||= { votes: {}, decideAt: 0, timer: null };
+    this.#resolveNext();
+  }
+
+  #voteNext(pid, id) {
+    if (!this.next) return { ok: false, error: 'No vote right now', key: 'err.noVote' };
+    if (!this.#canPlay(id)) return { ok: false, error: 'Not enough seats for that game', key: 'err.tableFull' };
+    if (this.next.decideAt) return { ok: false, error: 'The host decides now', key: 'err.noVote' };
+    this.next.votes[pid] = id;
+    this.broadcast();
+    return { ok: true };
+  }
+
+  #resolveNext() {
+    const n = this.next;
+    if (!n || n.decideAt) return;
+    const voters = this.#voters();
+    if (!voters.length || voters.some(id => !n.votes[id])) return;
+    const picks = new Set(voters.map(id => n.votes[id]));
+    if (picks.size === 1) {
+      const [id] = picks;
+      this.#playNext(id);
+      return;
+    }
+    n.decideAt = Date.now() + DECIDE_MS;
+    n.timer = setTimeout(() => {
+      if (this.next !== n) return;
+      this.#playNext(this.#majority(n.votes, voters));
+    }, DECIDE_MS);
+  }
+
+  // Most votes wins; a tie keeps the current game, else the host's pick, else the first listed.
+  #majority(votes, voters) {
+    const count = {};
+    for (const id of voters) count[votes[id]] = (count[votes[id]] || 0) + 1;
+    const best = Math.max(...Object.values(count));
+    const top = Object.keys(count).filter(id => count[id] === best);
+    if (top.includes(this.game.type)) return this.game.type;
+    if (top.includes(votes[this.myId])) return votes[this.myId];
+    return GAME_IDS.find(id => top.includes(id));
+  }
+
+  #playNext(id) {
+    if (!this.next) return;
+    clearTimeout(this.next.timer);
+    this.next = null;
+    const g = this.game;
+    if (id === g.type && g.phase === 'roundOver') {
+      // Next round of the same game: everyone still to vote says yes.
+      for (const p of [...g.pendingVoters]) g.apply(p.id, { type: 'vote', yes: true });
+    } else {
+      if (id !== g.type) this.#switchGame(id);
+      this.game.start();
+    }
+    this.broadcast();
+  }
+
+  #nextView() {
+    const n = this.next;
+    if (!n) return null;
+    return {
+      votes: { ...n.votes },
+      voters: this.#voters(),
+      deciding: !!n.decideAt,
+      left: n.decideAt ? Math.max(0, n.decideAt - Date.now()) : 0,
+      playable: GAME_IDS.filter(id => this.#canPlay(id)),
+    };
+  }
+
   broadcast() {
+    this.#syncNext();
     for (const [pid, peerId] of this.playerToPeer) this.net?.send(peerId, { t: 'state', view: this.viewFor(pid) });
     emit(this, 'state', { view: this.viewFor(this.myId) });
     this.#scheduleBot();

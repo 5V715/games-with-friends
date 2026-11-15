@@ -34,7 +34,7 @@ This is a private fan implementation with its own card designs.
   discard pile. Large touch targets, haptics, safe-area aware, installable (PWA manifest).
 - Full Rommé rules: 110 cards (2 decks + 6 jokers), sets and runs, ace low, high or around the corner (K‑A‑2),
   40-point first meld, laying off, joker swapping, Hand-Rommé (double penalty),
-  voting on another round, and a score sheet.
+  a score sheet.
 - Host-authoritative networking: the host's browser runs the game and sends each
   player only their own hand. The real-time game simulates 60 ticks per second on
   the host; input and frames (20 per second, interpolated) use a second, unordered
@@ -52,6 +52,10 @@ This is a private fan implementation with its own card designs.
 - Push to talk: hold 🎤 to record a short voice message (up to 15 s). It is sent
   peer-to-peer to everyone at the table and plays right away. This needs HTTPS and
   microphone permission.
+- After every round or game the same dialog for all games: everyone taps what to
+  play next, the current game ("again") or any other game with enough seats. If all
+  agree it starts right away with everyone still at the table; on a split the host
+  decides, and after 15 seconds the majority wins. Bots don't vote.
 - Bots fill seats; a disconnected player is auto-played until they rejoin. If a
   guest reloads the page, they get their seat back. After the phone's screen was
   off, a guest checks the link and reconnects by itself; for 15 minutes the start

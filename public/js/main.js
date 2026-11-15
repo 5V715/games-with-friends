@@ -398,9 +398,7 @@ function renderResult(v, res) {
   $('#round-sub').textContent = res.sub;
   $('#round-sub').hidden = !res.sub;
   $('#round-scores').innerHTML = res.html;
-  $('#vote-box').hidden = !res.vote;
-  $('#over-box').hidden = !res.over;
-  if (res.vote) renderVotes();
+  renderNext();
   if (ui.shownResultKey === res.key) return;
   ui.shownResultKey = res.key;
   closeChoice();
@@ -895,22 +893,62 @@ function openSheet() {
   openDialog('dlg-sheet');
 }
 
-function renderVotes() {
+// After a round or game everyone taps the game to play next; the current
+// one means "another round". A split vote goes to the host (see session.js).
+const PLAYER_COLORS = ['#ff4fd8', '#38f2ff', '#ffe14d', '#4dffa6', '#ff9a2e', '#8a6cff', '#ff6b7d', '#c9f9ff'];
+let nextSeen = 0; // when the current view.next arrived, for the countdown
+let nextTimer = null;
+
+function renderNext() {
   const v = ui.view;
-  const list = $('#vote-list');
-  list.innerHTML = '';
-  for (const p of v.players) {
-    const li = document.createElement('li');
-    const vote = v.votes?.[p.id];
-    const chip = vote === true ? `<span class="chip ok">✓ ${t('vote.again')}</span>`
-      : vote === false ? `<span class="chip bad">✗ ${t('vote.stop')}</span>`
-        : `<span class="chip">${t('vote.pending')}</span>`;
-    li.innerHTML = `<span>${esc(p.id === v.you ? t('game.you') : p.name)}</span>${chip}`;
-    list.append(li);
+  const n = v?.next;
+  $('#next-box').hidden = !n;
+  clearInterval(nextTimer);
+  if (!n) return;
+  nextSeen = Date.now();
+  const isHost = v.host === v.you;
+  const name = (id) => {
+    const p = v.players.find(x => x.id === id);
+    return id === v.you ? t('game.you') : p?.name || '?';
+  };
+  const color = (id) => PLAYER_COLORS[v.players.findIndex(p => p.id === id) % PLAYER_COLORS.length];
+  const mine = n.votes[v.you];
+  const box = $('#next-tiles');
+  box.innerHTML = '';
+  for (const id of GAME_IDS) {
+    const b = document.createElement('button');
+    const ok = n.playable.includes(id);
+    const voters = Object.keys(n.votes).filter(p => n.votes[p] === id);
+    b.className = 'next-tile' + (id === v.game ? ' cur' : '') + (mine === id ? ' mine' : '') + (n.deciding && voters.length ? ' picked' : '');
+    b.disabled = !ok || (n.deciding && !isHost);
+    b.setAttribute('role', 'radio');
+    b.setAttribute('aria-checked', String(mine === id));
+    b.title = ok ? t('game.' + id) : t('next.tooMany');
+    const short = hasKey('game.short.' + id) ? t('game.short.' + id) : t('game.' + id);
+    b.innerHTML = `${id === v.game ? `<span class="next-again">${esc(t('next.again'))}</span>` : ''}` +
+      `<span class="game-icon">${GAMES[id].icon}</span><span class="game-name">${esc(short)}</span>` +
+      `<span class="next-dots">${voters.map(p => `<i style="background:${color(p)}" title="${esc(name(p))}"></i>`).join('')}</span>`;
+    b.onclick = () => act(n.deciding ? { type: 'nextDecide', game: id } : { type: 'next', game: id });
+    box.append(b);
   }
-  const mine = v.votes?.[v.you];
-  $('#btn-vote-yes').classList.toggle('chosen', mine === true);
-  $('#btn-vote-no').classList.toggle('chosen', mine === false);
+  const status = $('#next-status');
+  const timer = $('#next-timer');
+  timer.hidden = !n.deciding;
+  if (n.deciding) {
+    const main = isHost ? t('next.youDecide') : t('next.hostDecides', { name: name(v.host) });
+    status.classList.toggle('host', isHost);
+    const tick = () => {
+      const left = Math.max(0, n.left - (Date.now() - nextSeen));
+      timer.firstElementChild.style.width = `${(left / 15000) * 100}%`;
+      status.textContent = `${main} ${t('next.majority', { n: Math.ceil(left / 1000) })}`;
+    };
+    tick();
+    nextTimer = setInterval(tick, 250);
+  } else {
+    status.classList.remove('host');
+    const waiting = n.voters.filter(id => !n.votes[id] && id !== v.you).map(name);
+    status.textContent = waiting.length ? t('next.waiting', { names: waiting.join(', ') }) : '';
+  }
 }
 
 function renderRoundOver() {
@@ -938,10 +976,8 @@ function renderRoundOver() {
     $('#round-title').textContent = who + (v.result.handRomme ? t('round.hand') : '!');
     sub.hidden = true;
     renderScoresTable($('#round-scores'), { withHands: true });
-    renderVotes();
   }
-  $('#vote-box').hidden = over;
-  $('#over-box').hidden = !over;
+  renderNext();
 
   // Open the dialog once per finished round and once when the game ends.
   const key = `${v.gameNo}:${v.round}:${v.phase}`;
@@ -1825,10 +1861,7 @@ function bind() {
   };
   $('#btn-menu').onclick = openMenu;
   $('#btn-quit').onclick = () => { if (confirm(t('menu.leaveConfirm'))) leave(); };
-  $('#btn-vote-yes').onclick = () => act({ type: 'vote', yes: true });
-  $('#btn-vote-no').onclick = () => act({ type: 'vote', yes: false });
-  $('#btn-new-game').onclick = () => { closeDialog('dlg-round'); act({ type: 'newGame' }); };
-  $('#btn-over-leave').onclick = leave;
+  $('#btn-next-leave').onclick = leave;
   $('#btn-round-open').onclick = () => openDialog('dlg-round');
   $('#btn-menu-sheet').onclick = () => { closeDialog('dlg-menu'); openSheet(); };
   $('#opponents').addEventListener('click', (e) => { if (e.target.closest('#btn-sheet')) openSheet(); });
